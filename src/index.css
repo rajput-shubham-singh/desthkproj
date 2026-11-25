@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    background-color: #F5F2EB;
+    color: #18181B;
+    font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    background-color: #F5F2EB;
+    color: #18181B;
+    margin: 0;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, .font-heading {
+    font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+    letter-spacing: -0.03em;
+    font-weight: 700;
+  }
+}
+
+/* Sharp ink borders by default */
+* {
+  border-color: #18181B;
+}
+
+/* Tactile neo-brutalist / handcrafted buttons and cards helper classes */
+.btn-terracotta {
+  background-color: #E05A47;
+  color: #FFFFFF;
+  border: 1.5px solid #18181B;
+  box-shadow: 3px 3px 0px #18181B;
+  transition: all 0.15s ease-in-out;
+}
+.btn-terracotta:hover {
+  background-color: #D04936;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px #18181B;
+}
+.btn-terracotta:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #18181B;
+}
+
+.btn-white {
+  background-color: #FFFFFF;
+  color: #18181B;
+  border: 1.5px solid #18181B;
+  box-shadow: 3px 3px 0px #18181B;
+  transition: all 0.15s ease-in-out;
+}
+.btn-white:hover {
+  background-color: #FFFDF9;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px #18181B;
+}
+.btn-white:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #18181B;
+}
+
+.card-tactile {
+  background-color: #FFFFFF;
+  border: 1.5px solid #18181B;
+  box-shadow: 3px 3px 0px #18181B;
+  transition: all 0.18s ease-in-out;
+}
+.card-tactile:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0px #18181B;
+}
+
+/* Subtle retro paper scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #F5F2EB;
+  border-left: 1px solid #18181B;
+}
+::-webkit-scrollbar-thumb {
+  background: #18181B;
+  border-radius: 0px;
+}
