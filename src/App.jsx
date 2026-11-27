@@ -602,7 +602,7 @@ export default function App() {
   // RENDER MAIN APPLICATION MARKETPLACE
   return (
     <MotionConfig reducedMotion={reduceMotion ? 'always' : 'user'}>
-      <div className="min-h-screen bg-[#F6F4EF] text-[#18181B] flex flex-col font-sans antialiased selection:bg-[#D95D39]/20 selection:text-[#18181B] relative">
+      <div className="w-full min-h-screen overflow-x-hidden bg-[#F6F4EF] text-[#18181B] flex flex-col font-sans antialiased selection:bg-[#D95D39]/20 selection:text-[#18181B] relative">
         <BlueprintCanvas forceReduceMotion={reduceMotion} />
       
       {/* Top Navbar (Single Minimal Row) */}
@@ -622,8 +622,8 @@ export default function App() {
         onMarkAllRead={handleMarkAllRead}
       />
 
-      {/* Main Body (Responsive Container) */}
-      <main className="relative z-10 flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+      {/* Main Body (Full-Bleed Fluid Container) */}
+      <main className="relative z-10 flex-1 w-full max-w-none px-6 lg:px-12 py-8 sm:py-10">
         
         {/* Hero banner shown on "Student Needs" and Main Category directory view */}
         {(activeTab === 'needs' || (activeTab === 'talent' && !selectedServiceCategory)) && (
@@ -928,8 +928,8 @@ export default function App() {
       />
 
       {/* Minimal Editorial Footer with Reduce Motion Toggle */}
-      <footer className="relative z-10 border-t border-[#18181B]/15 bg-white py-7 text-xs text-[#52525B] mt-16">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <footer className="relative z-10 w-full border-t border-[#18181B]/15 bg-white py-7 text-xs text-[#52525B] mt-16">
+        <div className="w-full max-w-none px-6 lg:px-12 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-2">
             <span className="font-bold text-[#18181B]">Skills for Hire</span>
             <span>·</span>

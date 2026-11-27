@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   AlertCircle
 } from 'lucide-react';
+import BrandLogo from './BrandLogo';
 
 export default function AuthPage({ 
   onLoginSuccess, 
@@ -138,19 +139,7 @@ export default function AuthPage({
       
       {/* Top Simple Utility Bar */}
       <header className="border-b-[1.5px] border-[#18181B] bg-white px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-[2px_2px_0px_#18181B]">
-        <div className="flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[#E05A47] text-white flex items-center justify-center font-display font-extrabold text-base border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B]">
-            S
-          </div>
-          <div>
-            <span className="font-display font-bold text-base text-[#18181B]">
-              Skills for Hire
-            </span>
-            <span className="text-[10px] font-mono text-[#18181B]/70 ml-1.5 uppercase hidden sm:inline">
-              • Lovely Professional University Official Portal
-            </span>
-          </div>
-        </div>
+        <BrandLogo subtitle="Official Campus Portal" />
 
         <button
           onClick={onCancelToGuest}
@@ -162,8 +151,8 @@ export default function AuthPage({
       </header>
 
       {/* Main Container */}
-      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
-        <div className="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <div className="flex-1 flex items-center justify-center px-6 lg:px-12 py-8 sm:py-12">
+        <div className="w-full max-w-none grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           
           {/* Left Column: Campus Trust Showcase (Desktop) */}
           <div className="hidden lg:flex lg:col-span-5 flex-col justify-between space-y-6 pr-4">

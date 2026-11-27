@@ -16,7 +16,7 @@ export default function RateGuideView({ onGoToTalent }) {
         <h1 className="text-3xl font-semibold text-[#111111] tracking-tight">
           Fair Rate Guide
         </h1>
-        <p className="text-sm text-[#666666] mt-2 max-w-2xl leading-relaxed">
+        <p className="text-sm text-[#666666] mt-2 w-full max-w-none leading-relaxed">
           Calibrated benchmarks across LPU — from ₹1,499 full-stack websites and mobile apps to ₹99 posters and PPT formatting. Every deal includes 2 free revisions.
         </p>
       </div>

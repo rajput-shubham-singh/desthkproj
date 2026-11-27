@@ -10,8 +10,8 @@ export default function HeroBanner({
   setSearchQuery 
 }) {
   return (
-    <section className="bg-white rounded-2xl border-[1.5px] border-[#18181B] p-6 sm:p-8 mb-10">
-      <div className="max-w-2xl mb-5">
+    <section className="w-full max-w-none bg-white rounded-2xl border-[1.5px] border-[#18181B] p-6 sm:p-8 mb-10">
+      <div className="w-full max-w-none mb-5">
         <span className="inline-block text-[11px] font-mono font-bold uppercase tracking-wider text-[#15803D] bg-[#DCFCE7] px-2.5 py-0.5 rounded border border-[#18181B] mb-3">
           LPU Student-to-Student Marketplace
         </span>
@@ -24,7 +24,7 @@ export default function HeroBanner({
       </div>
 
       {/* Sharp Search Input */}
-      <div className="relative max-w-xl mb-4">
+      <div className="relative w-full max-w-none mb-4">
         <Search className="w-4 h-4 text-[#52525B] absolute left-3.5 top-1/2 -translate-y-1/2" />
         <input
           type="text"

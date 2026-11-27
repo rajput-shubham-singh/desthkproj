@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bell, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import BrandLogo from './BrandLogo';
 
 export default function Navbar({ 
   activeTab, 
@@ -36,22 +37,11 @@ export default function Navbar({
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-[#F6F4EF]/95 backdrop-blur-md border-b-[1.5px] border-[#18181B]">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+    <header className="sticky top-0 z-40 w-full bg-[#F6F4EF]/95 backdrop-blur-md border-b-[1.5px] border-[#18181B]">
+      <div className="w-full px-6 lg:px-12 h-16 flex items-center justify-between gap-3">
         
-        {/* Left: Crisp Crafted Brand Title */}
-        <button
-          type="button"
-          onClick={() => setActiveTab('talent')}
-          className="text-left flex items-center space-x-2.5 focus:outline-none group flex-shrink-0"
-        >
-          <span className="w-7 h-7 rounded-lg bg-[#D95D39] text-white flex items-center justify-center font-bold text-sm border-[1.5px] border-[#18181B]">
-            S
-          </span>
-          <span className="text-base font-bold tracking-tight text-[#18181B]">
-            Skills for Hire <span className="text-xs font-mono font-semibold text-[#52525B]">· LPU</span>
-          </span>
-        </button>
+        {/* Left: Custom Brand SVG Logo */}
+        <BrandLogo onClick={() => setActiveTab('talent')} />
 
         {/* Center: 3 Clean Text Links with Shared layoutId Underline */}
         <nav className="hidden md:flex items-center space-x-7">
