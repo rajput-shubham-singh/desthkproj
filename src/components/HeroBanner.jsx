@@ -1,5 +1,6 @@
 import React from 'react';
-import { Search, Sparkles } from 'lucide-react';
+import { Search } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { CATEGORIES } from '../data/initialData';
 
 export default function HeroBanner({ 
@@ -9,70 +10,65 @@ export default function HeroBanner({
   setSearchQuery 
 }) {
   return (
-    <div className="bg-white rounded-2xl border-[1.5px] border-[#18181B] shadow-[4px_4px_0px_#18181B] p-6 sm:p-8 mb-8 relative overflow-hidden">
-      
-      {/* Decorative campus notice-board corner tab */}
-      <div className="absolute top-0 right-0 w-16 h-16 bg-[#FEF3C7] border-l-[1.5px] border-b-[1.5px] border-[#18181B] flex items-center justify-center font-mono font-bold text-[10px] text-[#B45309] rotate-0 select-none">
-        LPU '26
-      </div>
-
-      {/* Warm Mustard/Amber Highlight Tag */}
-      <div className="max-w-3xl mb-5">
-        <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-md bg-[#FEF3C7] text-[#92400E] border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B] text-xs font-mono font-bold mb-3">
-          <Sparkles className="w-3.5 h-3.5 text-[#F59E0B]" />
-          <span>LPU STUDENT-TO-STUDENT MARKETPLACE</span>
-        </div>
-
-        {/* High-Contrast Bold Geometric Heading */}
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-extrabold text-[#18181B] tracking-tight leading-tight">
-          Hire skilled LPU students for projects, or earn from your side skills on campus.
+    <section className="bg-white rounded-2xl border-[1.5px] border-[#18181B] p-6 sm:p-8 mb-10">
+      <div className="max-w-2xl mb-5">
+        <span className="inline-block text-[11px] font-mono font-bold uppercase tracking-wider text-[#15803D] bg-[#DCFCE7] px-2.5 py-0.5 rounded border border-[#18181B] mb-3">
+          LPU Student-to-Student Marketplace
+        </span>
+        <h1 className="text-2xl sm:text-3xl font-bold text-[#18181B] tracking-tight leading-snug">
+          Hire skilled LPU peers, or earn from your campus skills.
         </h1>
-
-        <p className="text-xs sm:text-sm text-[#52525B] mt-2 font-medium">
-          From ₹1,499 full-stack websites and Flutter apps to ₹99 poster designs and PPT help — verified LPU student builders, fair campus pricing, and 2 free changes guaranteed.
+        <p className="text-sm text-[#52525B] mt-1.5 leading-relaxed">
+          From ₹1,499 websites and apps to ₹99 posters — verified students, clear deadlines, and max 2 free revisions.
         </p>
       </div>
 
-      {/* Tactile Ink Search Bar */}
-      <div className="relative mb-5 max-w-2xl">
-        <Search className="w-4 h-4 text-[#18181B] absolute left-3.5 top-1/2 -translate-y-1/2" />
+      {/* Sharp Search Input */}
+      <div className="relative max-w-xl mb-4">
+        <Search className="w-4 h-4 text-[#52525B] absolute left-3.5 top-1/2 -translate-y-1/2" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by skill, poster, reel, python, tutor, or campus ID..."
-          className="w-full pl-10 pr-4 py-3 text-xs sm:text-sm rounded-xl bg-[#F5F2EB] border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B] text-[#18181B] font-mono placeholder-[#71717A] focus:outline-none focus:bg-white focus:shadow-[3px_3px_0px_#18181B] transition-all"
+          placeholder="Search websites, Figma, reels, posters, or student ID..."
+          className="w-full pl-10 pr-8 py-2.5 text-sm rounded-xl bg-[#F6F4EF] border-[1.5px] border-[#18181B] text-[#18181B] placeholder-[#71717A] focus:outline-none focus:bg-white transition-colors"
         />
         {searchQuery && (
           <button
             onClick={() => setSearchQuery("")}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#18181B] hover:text-[#E05A47]"
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#52525B] hover:text-[#18181B]"
           >
             ✕
           </button>
         )}
       </div>
 
-      {/* Tactile Category Filter Pills */}
-      <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none pt-1">
+      {/* Category Filter Pills with Shared layoutId */}
+      <div className="flex items-center flex-wrap gap-2 text-xs">
         {CATEGORIES.map((cat) => {
           const isSelected = selectedCategory === cat;
           return (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`whitespace-nowrap px-3.5 py-1.5 rounded-lg text-xs font-display font-bold transition-all flex-shrink-0 border-[1.5px] border-[#18181B] ${
+              className={`relative px-3 py-1 rounded-lg border-[1.5px] transition-colors ${
                 isSelected
-                  ? 'bg-[#18181B] text-white shadow-[2px_2px_0px_#18181B]'
-                  : 'bg-white text-[#18181B] hover:bg-[#FEF3C7] shadow-[2px_2px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
+                  ? 'text-white border-[#18181B] font-semibold'
+                  : 'bg-[#F6F4EF] text-[#18181B] border-[#18181B]/30 hover:border-[#18181B]'
               }`}
             >
-              {cat}
+              {isSelected && (
+                <motion.span
+                  layoutId="hero-category-pill"
+                  className="absolute inset-0 bg-[#18181B] rounded-[6px] z-0"
+                  transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                />
+              )}
+              <span className="relative z-10">{cat}</span>
             </button>
           );
         })}
       </div>
-
-    </div>
+    </section>
   );
 }

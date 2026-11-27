@@ -1,46 +1,45 @@
 import React from 'react';
-import { 
-  ShieldCheck, 
-  Phone, 
-  Hash, 
-  Briefcase, 
-  LogOut, 
-  Plus, 
-  Minus,
-  ArrowRight,
-  CheckCircle2,
-  Lock,
-  Pause,
-  Play,
-  Ban,
-  Clock,
-  Sparkles,
-  Users,
-  Zap,
-  Eye
-} from 'lucide-react';
-import TalentCard from './TalentCard';
-import NeedCard from './NeedCard';
+import { Plus, Minus } from 'lucide-react';
+
+const HOSTEL_OPTIONS = [
+  'BH-4',
+  'BH-2',
+  'BH-1',
+  'GH-2',
+  'Block 34',
+  'Block 38'
+];
+
+const GEAR_OPTIONS = [
+  'Laptop + Figma / VS Code',
+  'DSLR + Gimbal',
+  'Mobile Creator',
+  'Flutter + Android Studio',
+  'Laptop + Canva / PPT'
+];
 
 export default function AccountView({ 
   currentUser, 
   talentList, 
   needsList, 
   dealsList, 
+  examMode = false,
+  onToggleExamMode,
+  onUpdateProfileSettings,
   onLogout,
   onOpenOfferModal,
   onOpenNeedModal,
   onGoToDeals,
-  onHireTalent,
-  onICanDoThis,
   onUpdateTalentSlots,
   onToggleTalentPause,
-  onOpenMatches,
-  onViewSamples
+  onOpenMatches
 }) {
   if (!currentUser) return null;
 
-  // Filter skills and needs posted by this user (including demo link for test registration 12304567)
+  const hostelBlock = currentUser.hostelBlock || 'BH-4';
+  const gearTag = currentUser.gearTag || 'Laptop + Figma / VS Code';
+  const juniorShadowOpen = Boolean(currentUser.juniorShadowOpen);
+
   const myOfferedSkills = talentList.filter(t => 
     t.studentId.includes(currentUser.regNo) || 
     t.studentId.includes(currentUser.maskedRegNo) ||
@@ -56,392 +55,279 @@ export default function AccountView({
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-150">
+    <div className="space-y-10 animate-in fade-in duration-150">
       
-      {/* Account Profile Card */}
-      <div className="bg-white rounded-2xl border-[1.5px] border-[#18181B] shadow-[4px_4px_0px_#18181B] p-6 sm:p-8">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-5 pb-6 border-b-[1.5px] border-[#18181B]">
-          
-          {/* User Avatar & Info */}
-          <div className="flex items-start space-x-4">
-            <div className="w-14 h-14 rounded-2xl bg-[#E05A47] text-white flex items-center justify-center font-display font-extrabold text-2xl border-[1.5px] border-[#18181B] shadow-[2.5px_2.5px_0px_#18181B] flex-shrink-0">
-              {currentUser.fullName ? currentUser.fullName.charAt(0).toUpperCase() : 'U'}
+      {/* Profile & Settings Card */}
+      <section className="bg-white rounded-2xl border-[1.5px] border-[#18181B] p-7 sm:p-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#18181B]/15">
+          <div>
+            <div className="flex items-center space-x-2.5">
+              <h1 className="text-2xl font-bold text-[#18181B] tracking-tight">
+                {currentUser.fullName}
+              </h1>
+              <span className="inline-flex items-center space-x-1.5 text-xs font-mono font-bold px-2.5 py-0.5 rounded bg-[#DCFCE7] text-[#15803D] border border-[#18181B]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#15803D]" />
+                <span>LPU Verified</span>
+              </span>
             </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h1 className="text-xl sm:text-2xl font-display font-extrabold text-[#18181B]">
-                  {currentUser.fullName}
-                </h1>
-                <span className="inline-flex items-center text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#DCFCE7] text-[#15803D] border-[1.2px] border-[#18181B] shadow-[1.5px_1.5px_0px_#18181B]">
-                  <ShieldCheck className="w-3 h-3 mr-1" />
-                  VERIFIED LPU ID
-                </span>
-              </div>
-              <p className="text-xs text-[#52525B] mt-1 font-mono">
-                Public Campus Alias: <strong className="text-[#18181B]">{currentUser.publicAlias || `Student #${currentUser.regNo}`}</strong>
-              </p>
-            </div>
+            <p className="text-xs font-mono text-[#52525B] mt-1">
+              Public Alias: {currentUser.publicAlias || `Student #${currentUser.regNo}`}
+            </p>
           </div>
 
-          {/* Logout Action */}
           <button
             onClick={onLogout}
-            className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-display font-bold text-red-600 bg-red-50 hover:bg-red-100 border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 transition-all self-start"
+            className="px-3.5 py-1.5 rounded-lg border-[1.5px] border-[#18181B] bg-[#F6F4EF] hover:bg-[#FEE2E2] text-xs font-bold text-[#18181B] self-start sm:self-auto transition-colors"
           >
-            <LogOut className="w-3.5 h-3.5 mr-1.5" />
-            <span>Logout Account</span>
+            Log out
           </button>
-
         </div>
 
-        {/* Detailed Verified Credentials Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-6">
-          <div className="bg-[#F5F2EB] p-4 rounded-xl border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B]">
-            <div className="flex items-center text-xs font-mono font-bold text-[#71717A] mb-1">
-              <Hash className="w-3.5 h-3.5 mr-1 text-[#E05A47]" />
-              <span>REGISTRATION NO</span>
-            </div>
-            <span className="font-mono font-extrabold text-base text-[#18181B] tracking-wider block">
+        {/* Verified Credentials Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-sm">
+          <div className="p-4 rounded-xl bg-[#F6F4EF] border-[1.5px] border-[#18181B]">
+            <span className="text-xs font-mono text-[#71717A] block">Registration No</span>
+            <span className="font-mono font-bold text-[#18181B] mt-0.5 block">
               {currentUser.regNo}
             </span>
-            <span className="text-[10px] font-mono text-[#15803D] font-bold block mt-0.5">✓ Official LPU Student ID</span>
           </div>
-
-          <div className="bg-[#F5F2EB] p-4 rounded-xl border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B]">
-            <div className="flex items-center text-xs font-mono font-bold text-[#71717A] mb-1">
-              <Phone className="w-3.5 h-3.5 mr-1 text-[#E05A47]" />
-              <span>REGISTERED MOBILE</span>
-            </div>
-            <span className="font-mono font-extrabold text-base text-[#18181B] tracking-wider block">
-              +91 {currentUser.mobile || '98765 43210'}
-            </span>
-            <span className="text-[10px] font-mono text-[#71717A] block mt-0.5 flex items-center">
-              <Lock className="w-3 h-3 mr-0.5 text-[#18181B]" />
-              Private (Hidden from public)
+          <div className="p-4 rounded-xl bg-[#F6F4EF] border-[1.5px] border-[#18181B]">
+            <span className="text-xs font-mono text-[#71717A] block">Registered Mobile</span>
+            <span className="font-mono font-bold text-[#18181B] mt-0.5 block">
+              +91 {currentUser.mobile || '9876543210'}
             </span>
           </div>
-
-          <div className="bg-[#F5F2EB] p-4 rounded-xl border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B]">
-            <div className="flex items-center text-xs font-mono font-bold text-[#71717A] mb-1">
-              <Briefcase className="w-3.5 h-3.5 mr-1 text-[#E05A47]" />
-              <span>CAMPUS ROLE</span>
-            </div>
-            <span className="font-display font-bold text-sm text-[#18181B] block">
-              {currentUser.role}
+          <div className="p-4 rounded-xl bg-[#F6F4EF] border-[1.5px] border-[#18181B]">
+            <span className="text-xs font-mono text-[#71717A] block">Campus Role</span>
+            <span className="font-bold text-[#18181B] mt-0.5 block">
+              {currentUser.role} · LPU
             </span>
-            <span className="text-[10px] font-mono text-[#71717A] block mt-0.5">Lovely Professional University</span>
-          </div>
-
-          <div className="bg-[#F5F2EB] p-4 rounded-xl border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B]">
-            <div className="flex items-center text-xs font-mono font-bold text-[#15803D] mb-1">
-              <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-[#15803D]" />
-              <span>REVISION SHIELD</span>
-            </div>
-            <span className="font-display font-bold text-xs text-[#15803D] block">
-              2 Free Changes Guaranteed
-            </span>
-            <span className="text-[10px] font-mono text-[#71717A] block mt-0.5">Fair-play rate caps enforced</span>
           </div>
         </div>
 
-        {/* Privacy Safeguard Note */}
-        <div className="mt-6 p-4 rounded-xl bg-[#DCFCE7] border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B] flex items-start space-x-2.5 text-xs text-[#15803D]">
-          <ShieldCheck className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          <p className="leading-relaxed font-normal text-[#18181B]">
-            <strong>Campus Privacy Safeguard:</strong> On public cards, other students only see your anonymized alias (<span className="font-mono font-bold">{currentUser.publicAlias}</span>). Your mobile number is kept confidential inside your account until mutual deal confirmation.
-          </p>
+        {/* Profile Settings: Hostel Block, Gear/Mobile Tag & Junior Shadow Opt-In */}
+        <div className="pt-6 border-t border-[#18181B]/15 grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div>
+            <label className="block text-xs font-bold text-[#18181B] mb-1.5">
+              Hostel / Campus Block
+            </label>
+            <select
+              value={hostelBlock}
+              onChange={(e) => onUpdateProfileSettings && onUpdateProfileSettings({ hostelBlock: e.target.value })}
+              className="w-full px-3 py-2 text-xs font-mono rounded-lg bg-[#F6F4EF] border-[1.5px] border-[#18181B] text-[#18181B] focus:outline-none focus:bg-white"
+            >
+              {HOSTEL_OPTIONS.map((h) => (
+                <option key={h} value={h}>{h}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-[#18181B] mb-1.5">
+              Gear / Mobile Creator Tag
+            </label>
+            <select
+              value={gearTag}
+              onChange={(e) => onUpdateProfileSettings && onUpdateProfileSettings({ gearTag: e.target.value })}
+              className="w-full px-3 py-2 text-xs font-mono rounded-lg bg-[#F6F4EF] border-[1.5px] border-[#18181B] text-[#18181B] focus:outline-none focus:bg-white"
+            >
+              {GEAR_OPTIONS.map((g) => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col justify-between">
+            <span className="block text-xs font-bold text-[#18181B] mb-1.5">
+              Junior Shadow Opt-In
+            </span>
+            <button
+              type="button"
+              onClick={() => onUpdateProfileSettings && onUpdateProfileSettings({ juniorShadowOpen: !juniorShadowOpen })}
+              className={`w-full px-3 py-2 rounded-lg border-[1.5px] border-[#18181B] text-xs font-mono font-bold text-left flex items-center justify-between transition-colors ${
+                juniorShadowOpen
+                  ? 'bg-[#DCFCE7] text-[#15803D]'
+                  : 'bg-[#F6F4EF] text-[#52525B]'
+              }`}
+            >
+              <span>1st-Yr Learners Welcome</span>
+              <span>{juniorShadowOpen ? 'ON' : 'OFF'}</span>
+            </button>
+          </div>
         </div>
 
-      </div>
-
-      {/* SECTION 1: My Offered Skills (With Manual Slot & Availability Controls) */}
-      <section className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        {/* 1-Click Exam Mode Switch */}
+        <div className={`p-4 rounded-xl border-[1.5px] border-[#18181B] flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors ${
+          examMode ? 'bg-[#FEF3C7]' : 'bg-[#F6F4EF]'
+        }`}>
           <div>
             <div className="flex items-center space-x-2">
-              <h2 className="font-display font-bold text-xl text-[#18181B]">
-                My Offered Skills ({myOfferedSkills.length})
-              </h2>
-              <span className="text-[10px] font-mono font-bold text-[#15803D] bg-[#DCFCE7] px-2 py-0.5 rounded border border-[#18181B]">
-                Live Stock Controls Active
+              <span className="text-sm font-bold text-[#18181B]">
+                Exam Mode
+              </span>
+              <span className="inline-flex items-center space-x-1.5 text-xs font-mono font-bold">
+                <span className={`w-2 h-2 rounded-full ${examMode ? 'bg-[#F59E0B]' : 'bg-[#15803D]'}`} />
+                <span className={examMode ? 'text-[#B45309]' : 'text-[#15803D]'}>
+                  {examMode ? 'Busy (Exams)' : 'Active'}
+                </span>
               </span>
             </div>
             <p className="text-xs text-[#52525B] mt-0.5">
-              Control your available booking slots or pause your listing when busy with exams or assignments.
+              Pauses all your skill listings during MTT/ETT exams without hurting your reliability streak.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onToggleExamMode && onToggleExamMode()}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full border-[1.5px] border-[#18181B] transition-colors focus:outline-none flex-shrink-0 ${
+              examMode ? 'bg-[#F59E0B]' : 'bg-white'
+            }`}
+            role="switch"
+            aria-checked={examMode}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-[#18181B] transition-transform ${
+                examMode ? 'translate-x-5' : 'translate-x-0.5'
+              }`}
+            />
+          </button>
+        </div>
+      </section>
+
+      {/* My Offered Skills & Slot Controls */}
+      <section className="space-y-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-[#18181B]">
+              My Offered Skills ({myOfferedSkills.length})
+            </h2>
+            <p className="text-xs text-[#52525B] mt-0.5">
+              Adjust open booking slots or pause individual listings.
             </p>
           </div>
           <button
             onClick={onOpenOfferModal}
-            className="inline-flex items-center px-3.5 py-1.5 rounded-xl bg-[#E05A47] hover:bg-[#D04936] text-white text-xs font-display font-bold border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 transition-all self-start"
+            className="px-4 py-2 rounded-lg bg-[#D95D39] hover:bg-[#C24E2C] text-white text-xs font-bold border-[1.5px] border-[#18181B] transition-colors"
           >
-            <Plus className="w-3.5 h-3.5 mr-1 stroke-[3]" />
-            <span>+ Add Another Skill</span>
+            + Offer Skill
           </button>
         </div>
 
         {myOfferedSkills.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {myOfferedSkills.map(talent => (
               <div 
                 key={talent.id}
-                className="bg-white rounded-2xl border-[1.5px] border-[#18181B] shadow-[3px_3px_0px_#18181B] p-5 flex flex-col justify-between"
+                className="bg-white rounded-2xl border-[1.5px] border-[#18181B] hover:shadow-[3px_3px_0px_#18181B] transition-shadow p-6 flex flex-col justify-between space-y-5"
               >
                 <div>
-                  {/* Category & Status Pill */}
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-md bg-[#FEF3C7] text-[#92400E] border-[1.2px] border-[#18181B]">
-                      {talent.category}
+                  <div className="flex items-center justify-between text-xs font-mono mb-2">
+                    <span className="text-[#52525B]">{talent.category}</span>
+                    <span className="inline-flex items-center space-x-1.5 font-bold">
+                      <span className={`w-2 h-2 rounded-full ${
+                        talent.isPaused ? 'bg-[#F59E0B]' : talent.slots > 0 ? 'bg-[#15803D]' : 'bg-[#9CA3AF]'
+                      }`} />
+                      <span className={talent.isPaused ? 'text-[#B45309]' : talent.slots > 0 ? 'text-[#15803D]' : 'text-[#71717A]'}>
+                        {talent.isPaused ? 'Busy (Exams)' : talent.slots > 0 ? `${talent.slots} open` : 'Booked'}
+                      </span>
                     </span>
-
-                    {talent.isPaused ? (
-                      <span className="inline-flex items-center text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#FEE2E2] text-[#991B1B] border-[1.2px] border-[#18181B]">
-                        <Ban className="w-2.5 h-2.5 mr-1" />
-                        Paused (Busy)
-                      </span>
-                    ) : talent.slots > 0 ? (
-                      <span className="inline-flex items-center text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#DCFCE7] text-[#15803D] border-[1.2px] border-[#18181B] shadow-[1px_1px_0px_#18181B]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#15803D] mr-1 animate-pulse" />
-                        {talent.slots} {talent.slots === 1 ? 'Slot' : 'Slots'} Open
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#F3F4F6] text-[#6B7280] border-[1.2px] border-[#18181B]">
-                        ✕ Booked Out (0 Slots)
-                      </span>
-                    )}
                   </div>
-
-                  <h3 className="font-display font-bold text-base text-[#18181B] leading-snug">
-                    {talent.title}
-                  </h3>
-                  <p className="text-xs text-[#52525B] mt-1.5 line-clamp-2 leading-relaxed">
-                    {talent.description}
+                  <h3 className="text-base font-bold text-[#18181B]">{talent.title}</h3>
+                  <p className="text-xs font-mono text-[#52525B] mt-1">
+                    From ₹{Number(talent.startingPrice).toLocaleString('en-IN')} · {talent.deliveryTime}
                   </p>
-
-                  <div className="mt-3 pt-2.5 border-t-[1.2px] border-dashed border-[#18181B]/20 flex items-center justify-between text-xs font-mono">
-                    <span className="font-bold text-[#18181B]">₹{talent.startingPrice} {talent.priceUnit ? `/${talent.priceUnit.replace('per ', '')}` : ''}</span>
-                    <span className="text-[#71717A] text-[11px]">{talent.deliveryTime}</span>
-                  </div>
                 </div>
 
-                {/* Dedicated Manual Slot & Availability Control Box */}
-                <div className="mt-4 pt-3 border-t-[1.5px] border-[#18181B] bg-[#F5F2EB] rounded-xl p-3 border-[1.2px] shadow-[2px_2px_0px_#18181B] space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-[11px] font-mono font-bold text-[#18181B] uppercase tracking-wider block">
-                        Available Slots:
-                      </span>
-                      <span className="text-[10px] font-mono text-[#71717A]">
-                        Live capacity on board
-                      </span>
-                    </div>
-
-                    {/* Plus / Minus Counter Buttons */}
-                    <div className="flex items-center space-x-1.5">
-                      <button
-                        onClick={() => onUpdateTalentSlots(talent.id, -1)}
-                        disabled={talent.slots <= 0}
-                        className="w-7 h-7 rounded-lg bg-white hover:bg-[#FEF3C7] disabled:opacity-40 disabled:hover:bg-white text-[#18181B] border-[1.2px] border-[#18181B] shadow-[1px_1px_0px_#18181B] font-mono font-extrabold flex items-center justify-center active:translate-x-0.5 active:translate-y-0.5 transition-all text-xs"
-                        title="Decrease available slot"
-                      >
-                        <Minus className="w-3.5 h-3.5" />
-                      </button>
-                      <div className="w-10 text-center font-mono font-black text-sm bg-white py-1 rounded-lg border-[1.2px] border-[#18181B] shadow-[1px_1px_0px_#18181B]">
-                        {talent.slots || 0}
-                      </div>
-                      <button
-                        onClick={() => onUpdateTalentSlots(talent.id, 1)}
-                        disabled={(talent.slots || 0) >= 5}
-                        className="w-7 h-7 rounded-lg bg-white hover:bg-[#FEF3C7] disabled:opacity-40 disabled:hover:bg-white text-[#18181B] border-[1.2px] border-[#18181B] shadow-[1px_1px_0px_#18181B] font-mono font-extrabold flex items-center justify-center active:translate-x-0.5 active:translate-y-0.5 transition-all text-xs"
-                        title="Increase available slot"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 1-Click "Mark Busy / Take Break" Toggle */}
+                <div className="pt-4 border-t border-[#18181B]/15 flex items-center justify-between gap-3">
                   <div className="flex items-center space-x-2">
+                    <span className="text-xs font-mono text-[#52525B]">Slots:</span>
                     <button
-                      onClick={() => onToggleTalentPause(talent.id)}
-                      className={`flex-1 py-2 px-3 rounded-xl text-xs font-display font-bold border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all flex items-center justify-center ${
-                        talent.isPaused
-                          ? 'bg-[#15803D] hover:bg-[#166534] text-white'
-                          : 'bg-white hover:bg-[#FEE2E2] text-[#991B1B]'
-                      }`}
+                      onClick={() => onUpdateTalentSlots(talent.id, -1)}
+                      disabled={talent.slots <= 0}
+                      className="w-7 h-7 rounded-md bg-[#F6F4EF] border-[1.5px] border-[#18181B] flex items-center justify-center text-[#18181B] disabled:opacity-40"
                     >
-                      {talent.isPaused ? (
-                        <>
-                          <Play className="w-3.5 h-3.5 mr-1.5 fill-white stroke-none" />
-                          <span>Resume</span>
-                        </>
-                      ) : (
-                        <>
-                          <Pause className="w-3.5 h-3.5 mr-1.5 text-[#991B1B]" />
-                          <span>Mark Busy</span>
-                        </>
-                      )}
+                      <Minus className="w-3 h-3" />
                     </button>
-
-                    {onViewSamples && (
-                      <button
-                        onClick={() => onViewSamples(talent)}
-                        className="py-2 px-3 rounded-xl bg-white hover:bg-[#FEF3C7] text-[#18181B] text-xs font-mono font-bold border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center"
-                        title="Preview how clients see your work samples"
-                      >
-                        <Eye className="w-3.5 h-3.5 mr-1" />
-                        <span>Samples ({talent.samples?.length || 0})</span>
-                      </button>
-                    )}
+                    <span className="text-xs font-mono font-bold w-5 text-center">{talent.slots || 0}</span>
+                    <button
+                      onClick={() => onUpdateTalentSlots(talent.id, 1)}
+                      disabled={talent.slots >= 5}
+                      className="w-7 h-7 rounded-md bg-[#F6F4EF] border-[1.5px] border-[#18181B] flex items-center justify-center text-[#18181B] disabled:opacity-40"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
                   </div>
 
-                  <span className="text-[10px] font-mono text-[#71717A] block text-center">
-                    {talent.isPaused 
-                      ? "● Your card is currently hidden from booking." 
-                      : (talent.slots || 0) === 0 
-                        ? "● Card displays 'Booked Out' until you increase slots."
-                        : `● Accepting up to ${talent.slots} simultaneous project(s).`}
-                  </span>
+                  <button
+                    onClick={() => onToggleTalentPause(talent.id)}
+                    className="text-xs font-mono font-bold text-[#D95D39] hover:underline"
+                  >
+                    {talent.isPaused ? 'Resume listing' : 'Pause listing'}
+                  </button>
                 </div>
-
               </div>
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border-[1.5px] border-[#18181B] shadow-[3px_3px_0px_#18181B] p-8 text-center">
-            <p className="text-sm font-display font-bold text-[#18181B]">You haven't listed any skills yet.</p>
-            <p className="text-xs text-[#52525B] mt-1 font-normal">Offer your design, video editing, web, or tutoring skills to fellow LPU students.</p>
-            <button
-              onClick={onOpenOfferModal}
-              className="mt-3.5 inline-flex items-center text-xs font-display font-bold text-[#E05A47] hover:underline"
-            >
-              + List your first skill now →
-            </button>
+          <div className="bg-white rounded-2xl border-[1.5px] border-[#18181B] p-8 text-center">
+            <p className="text-sm text-[#52525B]">You haven't listed any skills yet.</p>
           </div>
         )}
       </section>
 
-      {/* SECTION 2: My Posted Needs */}
-      <section className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h2 className="font-display font-bold text-xl text-[#18181B]">
+      {/* My Posted Needs & Active Deals Summary */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+        <div className="bg-white rounded-2xl border-[1.5px] border-[#18181B] p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-bold text-[#18181B]">
               My Posted Needs ({myPostedNeeds.length})
-            </h2>
-            <p className="text-xs text-[#52525B] mt-0.5">
-              Requirements your club or project has published on campus
+            </h3>
+            <button
+              onClick={onOpenNeedModal}
+              className="text-xs font-bold text-[#D95D39] hover:underline"
+            >
+              + Post Need
+            </button>
+          </div>
+          {myPostedNeeds.length > 0 ? (
+            <div className="divide-y divide-[#18181B]/10">
+              {myPostedNeeds.map(n => (
+                <div key={n.id} className="py-3 flex items-center justify-between gap-2 text-xs">
+                  <span className="font-semibold text-[#18181B] truncate">{n.title}</span>
+                  {onOpenMatches && (
+                    <button
+                      onClick={() => onOpenMatches(n)}
+                      className="text-[#D95D39] font-bold flex-shrink-0 hover:underline"
+                    >
+                      Matches
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-[#71717A]">No requirements posted yet.</p>
+          )}
+        </div>
+
+        <div className="bg-white rounded-2xl border-[1.5px] border-[#18181B] p-6 flex flex-col justify-between space-y-4">
+          <div>
+            <h3 className="text-base font-bold text-[#18181B]">
+              Active Orders ({dealsList.filter(d => d.status !== 'completed').length})
+            </h3>
+            <p className="text-xs text-[#52525B] mt-1">
+              Track deal stages, watermarked drafts, and completion certificates.
             </p>
           </div>
           <button
-            onClick={onOpenNeedModal}
-            className="inline-flex items-center px-3.5 py-1.5 rounded-xl bg-white hover:bg-[#FEF3C7] text-[#18181B] text-xs font-display font-bold border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 transition-all self-start"
+            onClick={onGoToDeals}
+            className="text-xs font-bold text-[#D95D39] hover:underline self-start"
           >
-            <Plus className="w-3.5 h-3.5 mr-1 stroke-[2.5]" />
-            <span>+ Post New Need</span>
+            Go to My Deals →
           </button>
         </div>
-
-        {myPostedNeeds.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {myPostedNeeds.map(need => {
-              const isFilled = (need.filledCount || 0) >= (need.neededCount || 1);
-              const spotsLeft = (need.neededCount || 1) - (need.filledCount || 0);
-              const matchingCount = talentList.filter(
-                (t) => t.category === need.category && !t.isPaused && (t.slots || 0) > 0
-              ).length;
-
-              return (
-                <div 
-                  key={need.id}
-                  className="bg-white rounded-2xl border-[1.5px] border-[#18181B] shadow-[3px_3px_0px_#18181B] p-5 flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-md bg-[#FDF3F1] text-[#E05A47] border-[1.2px] border-[#18181B]">
-                        {need.category}
-                      </span>
-                      {isFilled ? (
-                        <span className="inline-flex items-center text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#DCFCE7] text-[#15803D] border-[1.2px] border-[#18181B]">
-                          <CheckCircle2 className="w-3 h-3 mr-1" />
-                          ✓ Position Filled
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#FEF3C7] text-[#92400E] border-[1.2px] border-[#18181B]">
-                          ● {spotsLeft} Spot Open
-                        </span>
-                      )}
-                    </div>
-
-                    <h3 className="font-display font-bold text-base text-[#18181B] leading-snug">
-                      {need.title}
-                    </h3>
-                    <p className="text-xs text-[#52525B] mt-1.5 line-clamp-2 leading-relaxed">
-                      {need.description}
-                    </p>
-
-                    <div className="mt-3 pt-2.5 border-t-[1.2px] border-dashed border-[#18181B]/20 flex items-center justify-between text-xs font-mono">
-                      <span className="font-bold text-[#18181B]">Budget: ₹{need.budget}</span>
-                      <span className="text-[#71717A] text-[11px]">{need.deadline}</span>
-                    </div>
-                  </div>
-
-                  {/* Spot Fulfillment Summary & Clickable Live Match Badge */}
-                  <div className="mt-4 pt-3 border-t-[1.5px] border-[#18181B] bg-[#F5F2EB] rounded-xl p-3 border-[1.2px] shadow-[2px_2px_0px_#18181B] flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
-                    <span className="font-bold text-[#18181B] flex items-center">
-                      <Users className="w-3.5 h-3.5 mr-1 text-[#E05A47]" />
-                      Filled: {need.filledCount || 0} / {need.neededCount || 1}
-                    </span>
-
-                    {onOpenMatches && (
-                      <button
-                        onClick={() => onOpenMatches(need)}
-                        className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded border border-[#18181B] transition-all active:translate-x-0.5 active:translate-y-0.5 ${
-                          matchingCount > 0
-                            ? 'bg-[#FEF3C7] hover:bg-[#FDE68A] text-[#92400E] shadow-[1px_1px_0px_#18181B]'
-                            : 'bg-white hover:bg-[#F5F2EB] text-[#71717A]'
-                        }`}
-                        title="Click to view students on campus ready for this skill"
-                      >
-                        <Zap className="w-2.5 h-2.5 mr-1 text-[#D97706] fill-[#D97706]" />
-                        <span>⚡ {matchingCount} Available Matches</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl border-[1.5px] border-[#18181B] shadow-[3px_3px_0px_#18181B] p-8 text-center">
-            <p className="text-sm font-display font-bold text-[#18181B]">No open requirements posted yet.</p>
-            <p className="text-xs text-[#52525B] mt-1 font-normal">Need help with festival posters, code bugs, or event photography? Post a need.</p>
-            <button
-              onClick={onOpenNeedModal}
-              className="mt-3.5 inline-flex items-center text-xs font-display font-bold text-[#E05A47] hover:underline"
-            >
-              + Post a requirement →
-            </button>
-          </div>
-        )}
       </section>
-
-      {/* SECTION 3: My Deals Link */}
-      <div className="bg-white rounded-2xl border-[1.5px] border-[#18181B] shadow-[4px_4px_0px_#18181B] p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div>
-          <h3 className="font-display font-bold text-base text-[#18181B]">
-            My Deals & Active Agreements
-          </h3>
-          <p className="text-xs text-[#52525B] mt-0.5">
-            You have {dealsList.length} total deal agreement(s) recorded in your campus account.
-          </p>
-        </div>
-        <button
-          onClick={onGoToDeals}
-          className="inline-flex items-center px-4 py-2 rounded-xl bg-[#18181B] hover:bg-[#27272A] text-white text-xs font-display font-bold border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 transition-all flex-shrink-0"
-        >
-          <span>Open My Deals Tab</span>
-          <ArrowRight className="w-3.5 h-3.5 ml-1.5 stroke-[2.5]" />
-        </button>
-      </div>
 
     </div>
   );

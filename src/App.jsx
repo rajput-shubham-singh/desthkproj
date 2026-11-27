@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import { MotionConfig } from 'framer-motion';
+import BlueprintCanvas from './components/BlueprintCanvas';
 import Navbar from './components/Navbar';
 import HeroBanner from './components/HeroBanner';
 import TalentCard from './components/TalentCard';
@@ -16,7 +18,7 @@ import ServiceCategoryCard from './components/ServiceCategoryCard';
 import CategoryDetailView from './components/CategoryDetailView';
 import Toast from './components/Toast';
 import { INITIAL_TALENT, INITIAL_NEEDS, INITIAL_DEALS, SERVICE_CATEGORIES } from './data/initialData';
-import { RotateCcw, Plus } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
 
 export default function App() {
   // Main view router: 'app' (Marketplace) | 'auth' (Full-screen dedicated Login/Signup)
@@ -38,9 +40,12 @@ export default function App() {
   const [needsList, setNeedsList] = useState(INITIAL_NEEDS);
   const [dealsList, setDealsList] = useState(INITIAL_DEALS);
 
-  // Search & Category filter
+  // Search, Category & Urgent / Exam Mode filters
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [urgentNeedsOnly, setUrgentNeedsOnly] = useState(false);
+  const [examMode, setExamMode] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   // Modals state
   const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
@@ -66,6 +71,32 @@ export default function App() {
 
   // Toast notification
   const [toast, setToast] = useState(null);
+
+  // Campus Notifications state
+  const [notifications, setNotifications] = useState([
+    {
+      id: 'notif-1',
+      message: 'New urgent reel request matches your Video Editing skill.',
+      time: '12 mins ago',
+      read: false
+    },
+    {
+      id: 'notif-2',
+      message: 'Deal DEAL-LPU-1024 moved to Watermarked Draft stage.',
+      time: '1 hr ago',
+      read: false
+    },
+    {
+      id: 'notif-3',
+      message: '1st-year student applied to shadow your next campus project.',
+      time: 'Yesterday',
+      read: true
+    }
+  ]);
+
+  const handleMarkAllRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
 
   const showToast = (title, message, type = 'success') => {
     setToast({ title, message, type });
@@ -130,6 +161,9 @@ export default function App() {
   // Filtered needs
   const filteredNeeds = useMemo(() => {
     return needsList.filter((item) => {
+      if (urgentNeedsOnly && !item.isUrgent) {
+        return false;
+      }
       if (selectedCategory !== "All" && item.category !== selectedCategory) {
         return false;
       }
@@ -145,7 +179,7 @@ export default function App() {
       }
       return true;
     });
-  }, [needsList, selectedCategory, searchQuery]);
+  }, [needsList, selectedCategory, searchQuery, urgentNeedsOnly]);
 
   // Strict Auth Protected Action Handlers
   const handleHireTalent = (talent) => {
@@ -384,7 +418,7 @@ export default function App() {
         if (t.id === talentId) {
           const nextPaused = !t.isPaused;
           showToast(
-            nextPaused ? 'Listing Paused (Busy)' : 'Listing Active & Available',
+            nextPaused ? 'Listing Paused (Busy / Exam Mode)' : 'Listing Active & Available',
             nextPaused
               ? `"${t.title}" is paused. It won't accept new bookings until unpaused.`
               : `"${t.title}" is now open and accepting bookings on campus.`,
@@ -395,6 +429,136 @@ export default function App() {
         return t;
       })
     );
+  };
+
+  // 1-Click Exam Week / Busy Mode Toggle (Top Bar & My Account)
+  const handleToggleExamMode = () => {
+    requireAuth(() => {
+      const nextExamMode = !examMode;
+      setExamMode(nextExamMode);
+
+      setTalentList((prev) =>
+        prev.map((t) => {
+          const isMine =
+            t.studentId.includes(currentUser.regNo) ||
+            t.studentId.includes(currentUser.maskedRegNo) ||
+            t.studentId.includes(currentUser.fullName) ||
+            (currentUser.regNo === '12304567' && t.id === 'talent-1');
+          if (isMine) {
+            return { ...t, isPaused: nextExamMode };
+          }
+          return t;
+        })
+      );
+
+      showToast(
+        nextExamMode ? 'Exam Mode Enabled' : 'Exam Mode Turned Off',
+        nextExamMode
+          ? 'Your listings are marked Busy (Exams) and hiring is paused.'
+          : 'Welcome back! Your skill listings are active again.',
+        nextExamMode ? 'info' : 'success'
+      );
+    }, 'Please login with your LPU Registration Number to toggle Exam Mode.');
+  };
+
+  // Update Profile & Settings in My Account and sync across user's listings
+  const handleUpdateProfileSettings = (updates) => {
+    if (!currentUser) return;
+    const updatedUser = { ...currentUser, ...updates };
+    setCurrentUser(updatedUser);
+
+    setTalentList((prev) =>
+      prev.map((t) => {
+        const isMine =
+          t.studentId.includes(currentUser.regNo) ||
+          t.studentId.includes(currentUser.maskedRegNo) ||
+          t.studentId.includes(currentUser.fullName) ||
+          (currentUser.regNo === '12304567' && t.id === 'talent-1');
+        if (isMine) {
+          return {
+            ...t,
+            hostelTag: updates.hostelBlock ? `Hostel ${updates.hostelBlock}` : t.hostelTag,
+            gearTag: updates.gearTag || t.gearTag,
+            juniorAssistantOpen:
+              updates.juniorShadowOpen !== undefined ? updates.juniorShadowOpen : t.juniorAssistantOpen
+          };
+        }
+        return t;
+      })
+    );
+
+    showToast('Profile Updated', 'Your campus profile settings are saved.', 'success');
+  };
+
+  // CP4 4-Step Deal Tracker Progression
+  const handleAdvanceDealStep = (dealId, targetStep) => {
+    const clampedStep = Math.max(1, Math.min(4, targetStep));
+    const targetDeal = dealsList.find((d) => d.id === dealId);
+    if (!targetDeal) return;
+
+    const wasCompleted = (targetDeal.trackerStep || 1) === 4 || targetDeal.status === 'completed';
+    const nowCompleted = clampedStep === 4;
+
+    if (wasCompleted !== nowCompleted) {
+      if (targetDeal.sourceType === 'talent' && targetDeal.sourceId) {
+        setTalentList((prev) =>
+          prev.map((t) => {
+            if (t.id === targetDeal.sourceId) {
+              const nextSlots = nowCompleted
+                ? Math.min((t.totalSlots || 3), (t.slots || 0) + 1)
+                : Math.max(0, (t.slots || 0) - 1);
+              return { ...t, slots: nextSlots };
+            }
+            return t;
+          })
+        );
+      } else if (targetDeal.sourceType === 'need' && targetDeal.sourceId) {
+        setNeedsList((prev) =>
+          prev.map((n) => {
+            if (n.id === targetDeal.sourceId) {
+              const nextFilled = nowCompleted
+                ? Math.max(0, (n.filledCount || 1) - 1)
+                : (n.filledCount || 0) + 1;
+              return { ...n, filledCount: nextFilled };
+            }
+            return n;
+          })
+        );
+      }
+    }
+
+    setDealsList((prev) =>
+      prev.map((deal) =>
+        deal.id === dealId
+          ? { ...deal, trackerStep: clampedStep, status: nowCompleted ? 'completed' : 'in-progress' }
+          : deal
+      )
+    );
+
+    const stepMessages = {
+      1: '1. Brief Locked with upfront terms.',
+      2: '2. Watermarked Draft shared with client.',
+      3: '3. Revision (1/2) in progress (Max 2 Free Revisions).',
+      4: '4. Final Handover complete! Verified Completion Badge issued & +1 slot restocked.'
+    };
+
+    showToast(
+      nowCompleted ? 'Final Handover Complete!' : `Deal Updated to Stage ${clampedStep}/4`,
+      stepMessages[clampedStep],
+      nowCompleted ? 'success' : 'info'
+    );
+  };
+
+  // Apply as Junior Shadow / Assistant
+  const handleApplyJuniorAssistant = (talent) => {
+    requireAuth(() => {
+      const seniorName = talent.studentId.split('•')[0].trim();
+      showToast(
+        '✨ Junior Assistant Request Sent!',
+        `Applied to shadow ${seniorName} on "${talent.title}". They will message you on campus!`,
+        'success'
+      );
+    }, `Please login with your LPU Registration Number to apply as a Junior Assistant for ${talent.studentId}.`);
   };
 
   const handleRecommendStudent = (dealId, personId) => {
@@ -437,13 +601,14 @@ export default function App() {
 
   // RENDER MAIN APPLICATION MARKETPLACE
   return (
-    <div className="min-h-screen bg-[#F5F2EB] text-[#18181B] flex flex-col font-sans selection:bg-[#F59E0B]/30 selection:text-[#18181B]">
+    <MotionConfig reducedMotion={reduceMotion ? 'always' : 'user'}>
+      <div className="min-h-screen bg-[#F6F4EF] text-[#18181B] flex flex-col font-sans antialiased selection:bg-[#D95D39]/20 selection:text-[#18181B] relative">
+        <BlueprintCanvas forceReduceMotion={reduceMotion} />
       
-      {/* Top Navbar */}
+      {/* Top Navbar (Single Minimal Row) */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={handleTabChange}
-        onOpenOfferModal={handleOpenOfferModal}
         onOpenNeedModal={handleOpenNeedModal}
         onNavigateToAuth={() => {
           setAuthBannerMessage("");
@@ -451,10 +616,14 @@ export default function App() {
         }}
         currentUser={currentUser}
         dealsCount={activeDealsCount}
+        examMode={examMode}
+        onToggleExamMode={handleToggleExamMode}
+        notifications={notifications}
+        onMarkAllRead={handleMarkAllRead}
       />
 
-      {/* Main Body */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-10">
+      {/* Main Body (Responsive Container) */}
+      <main className="relative z-10 flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
         
         {/* Hero banner shown on "Student Needs" and Main Category directory view */}
         {(activeTab === 'needs' || (activeTab === 'talent' && !selectedServiceCategory)) && (
@@ -483,10 +652,12 @@ export default function App() {
             <CategoryDetailView
               category={selectedServiceCategory}
               talentList={talentList}
+              currentUser={currentUser}
               onBackToCategories={() => setSelectedServiceCategory(null)}
               onHireTalent={handleHireTalent}
               onOpenOfferModal={handleOpenOfferModal}
               onViewSamples={handleViewSamples}
+              onApplyJuniorAssistant={handleApplyJuniorAssistant}
             />
           ) : searchQuery.trim() !== "" ? (
             /* Direct Search Results View when user types a search query */
@@ -534,32 +705,28 @@ export default function App() {
               )}
             </section>
           ) : (
-            /* Main Service Category Cards Grid */
-            <section>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+            /* Main Service Category Cards Grid (Clean 2-Column Editorial Layout) */
+            <section className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#EBEBEB]">
                 <div>
-                  <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-md bg-[#FEF3C7] text-[#92400E] border-[1.2px] border-[#18181B] text-[10px] font-mono font-bold uppercase tracking-wider mb-1.5 shadow-[1px_1px_0px_#18181B]">
-                    <span>⚡ Campus Talent Directory</span>
-                  </div>
-                  <h2 className="text-2xl sm:text-3xl font-display font-extrabold text-[#18181B] tracking-tight">
-                    Browse Talent by Campus Service
+                  <h2 className="text-xl font-semibold text-[#111111] tracking-tight">
+                    Browse by Service
                   </h2>
-                  <p className="text-xs sm:text-sm text-[#52525B] mt-0.5 font-medium">
-                    Click any service category below to view individual student rates, availability, and past sample works.
+                  <p className="text-xs text-[#666666] mt-0.5">
+                    Select a category to view available LPU students, rates, and sample work.
                   </p>
                 </div>
 
                 <button
                   onClick={handleOpenOfferModal}
-                  className="inline-flex items-center px-4 py-2 rounded-xl bg-[#E05A47] hover:bg-[#D04936] text-white text-xs font-display font-bold border-[1.5px] border-[#18181B] shadow-[2.5px_2.5px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 transition-all self-start"
+                  className="px-4 py-2 rounded-lg bg-[#D95D39] hover:bg-[#C24E2C] text-white text-xs font-bold border-[1.5px] border-[#18181B] hover:shadow-[2px_2px_0px_#18181B] transition-all self-start"
                 >
-                  <Plus className="w-3.5 h-3.5 mr-1 stroke-[3]" />
-                  <span>+ Offer a Skill</span>
+                  + Offer Skill
                 </button>
               </div>
 
-              {/* Service Category Cards Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Responsive Service Category Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {SERVICE_CATEGORIES.map((sc) => {
                   const availableStudents = talentList.filter(
                     (t) => (t.category === sc.categoryKey || t.category === sc.name) && !t.isPaused && (t.slots || 0) > 0
@@ -576,7 +743,6 @@ export default function App() {
                       key={sc.id}
                       category={sc}
                       availableCount={availableStudents.length}
-                      totalStudentsCount={totalStudents.length}
                       startingPrice={minPrice}
                       onSelectCategory={(cat) => setSelectedServiceCategory(cat)}
                     />
@@ -587,22 +753,48 @@ export default function App() {
           )
         )}
 
-        {/* Tab 2: Student Needs (3-Column Responsive Grid) */}
+        {/* Tab 2: Student Needs */}
         {activeTab === 'needs' && (
-          <section>
-            <div className="flex items-center justify-between mb-5">
+          <section className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#EBEBEB]">
               <div>
-                <h2 className="text-2xl sm:text-3xl font-display font-extrabold text-[#18181B] tracking-tight">
-                  Open Student & Club Needs
+                <h2 className="text-xl font-semibold text-[#111111] tracking-tight">
+                  Student & Club Needs
                 </h2>
-                <p className="text-xs sm:text-sm text-[#52525B] mt-0.5 font-medium">
-                  Showing {filteredNeeds.length} active campus requirements. Pick one and click "I Can Do This" to earn.
+                <p className="text-xs text-[#666666] mt-0.5">
+                  Showing {filteredNeeds.length} active requirements.
                 </p>
+              </div>
+
+              {/* Minimal Filter Toggle: All Needs vs Urgent 24-Hr */}
+              <div className="flex items-center space-x-2 self-start sm:self-auto bg-white p-1 rounded-lg border border-[#EBEBEB]">
+                <button
+                  type="button"
+                  onClick={() => setUrgentNeedsOnly(false)}
+                  className={`px-3 py-1.5 rounded-md text-xs transition-colors ${
+                    !urgentNeedsOnly
+                      ? 'bg-[#111111] text-white font-medium'
+                      : 'text-[#666666] hover:text-[#111111]'
+                  }`}
+                >
+                  All ({needsList.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUrgentNeedsOnly(true)}
+                  className={`px-3 py-1.5 rounded-md text-xs transition-colors ${
+                    urgentNeedsOnly
+                      ? 'bg-[#111111] text-white font-medium'
+                      : 'text-[#666666] hover:text-[#111111]'
+                  }`}
+                >
+                  Urgent 24-Hr
+                </button>
               </div>
             </div>
 
             {filteredNeeds.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {filteredNeeds.map((need) => (
                   <NeedCard
                     key={need.id}
@@ -614,14 +806,14 @@ export default function App() {
                 ))}
               </div>
             ) : (
-              <div className="bg-white rounded-2xl border-[1.5px] border-[#18181B] shadow-[4px_4px_0px_#18181B] p-12 text-center">
-                <p className="text-lg font-display font-bold text-[#18181B]">No campus needs found</p>
-                <p className="text-xs text-[#52525B] mt-1 font-normal">Try clearing your search query or posting the first requirement!</p>
+              <div className="bg-white rounded-xl border border-[#EBEBEB] p-12 text-center">
+                <p className="text-base font-medium text-[#111111]">No campus needs found</p>
+                <p className="text-sm text-[#666666] mt-1">Try clearing your search query or posting a requirement.</p>
                 <button
                   onClick={handleOpenNeedModal}
-                  className="mt-4 inline-flex items-center px-4 py-2 rounded-xl bg-[#E05A47] hover:bg-[#D04936] text-white text-xs font-display font-bold border-[1.5px] border-[#18181B] shadow-[2.5px_2.5px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 transition-all"
+                  className="mt-4 px-4 py-2 rounded-lg bg-[#111111] text-white text-xs font-medium"
                 >
-                  + Post a Need
+                  + Post Need
                 </button>
               </div>
             )}
@@ -639,6 +831,8 @@ export default function App() {
         {activeTab === 'deals' && (
           <MyDealsView
             deals={dealsList}
+            currentUser={currentUser}
+            onAdvanceStep={handleAdvanceDealStep}
             onToggleStatus={handleToggleDealStatus}
             onReopenSlot={handleReopenSlot}
             onRecommendStudent={handleRecommendStudent}
@@ -653,6 +847,9 @@ export default function App() {
             talentList={talentList}
             needsList={needsList}
             dealsList={dealsList}
+            examMode={examMode}
+            onToggleExamMode={handleToggleExamMode}
+            onUpdateProfileSettings={handleUpdateProfileSettings}
             onLogout={handleLogout}
             onOpenOfferModal={handleOpenOfferModal}
             onOpenNeedModal={handleOpenNeedModal}
@@ -706,6 +903,10 @@ export default function App() {
         onClose={() => setIsOfferModalOpen(false)}
         onAddTalent={handleAddTalent}
         currentUser={currentUser}
+        onOpenRateGuide={() => {
+          setIsOfferModalOpen(false);
+          setActiveTab('ratecard');
+        }}
       />
 
       {/* Modal: + Post a Need */}
@@ -714,6 +915,10 @@ export default function App() {
         onClose={() => setIsNeedModalOpen(false)}
         onAddNeed={handleAddNeed}
         currentUser={currentUser}
+        onOpenRateGuide={() => {
+          setIsNeedModalOpen(false);
+          setActiveTab('ratecard');
+        }}
       />
 
       {/* Global Toast */}
@@ -722,34 +927,36 @@ export default function App() {
         onClose={() => setToast(null)}
       />
 
-      {/* Handcrafted University Marketplace Footer */}
-      <footer className="border-t-[1.5px] border-[#18181B] bg-white py-8 text-xs text-[#52525B] mt-12 shadow-[0px_-2px_0px_#18181B]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-6 h-6 rounded-md bg-[#E05A47] text-white flex items-center justify-center font-display font-extrabold text-xs border border-[#18181B]">
-              S
-            </div>
-            <span className="font-display font-bold text-sm text-[#18181B]">
-              Skills for Hire <span className="font-mono font-normal text-xs text-[#71717A]">• Lovely Professional University</span>
-            </span>
+      {/* Minimal Editorial Footer with Reduce Motion Toggle */}
+      <footer className="relative z-10 border-t border-[#18181B]/15 bg-white py-7 text-xs text-[#52525B] mt-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center space-x-2">
+            <span className="font-bold text-[#18181B]">Skills for Hire</span>
+            <span>·</span>
+            <span>Lovely Professional University</span>
           </div>
 
-          <div className="flex items-center space-x-4 text-[11px] font-bold">
-            <button onClick={() => setActiveTab('talent')} className="hover:text-[#E05A47]">Find Talent</button>
-            <span>•</span>
-            <button onClick={() => setActiveTab('needs')} className="hover:text-[#E05A47]">Student Needs</button>
-            <span>•</span>
-            <button onClick={() => setActiveTab('ratecard')} className="hover:text-[#E05A47]">Rate Guide</button>
-            <span>•</span>
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-5">
+            <button onClick={() => setActiveTab('talent')} className="hover:text-[#18181B] transition-colors">Explore</button>
+            <button onClick={() => setActiveTab('needs')} className="hover:text-[#18181B] transition-colors">Student Needs</button>
+            <button onClick={() => setActiveTab('ratecard')} className="hover:text-[#18181B] transition-colors">Fair Rate Guide</button>
             {currentUser ? (
-              <button onClick={() => setActiveTab('account')} className="hover:text-[#E05A47]">My Account</button>
+              <button onClick={() => setActiveTab('account')} className="hover:text-[#18181B] transition-colors">My Account</button>
             ) : (
-              <button onClick={() => setViewMode('auth')} className="hover:text-[#E05A47]">Student Login</button>
+              <button onClick={() => setViewMode('auth')} className="hover:text-[#18181B] transition-colors">Student Login</button>
             )}
+            <button
+              type="button"
+              onClick={() => setReduceMotion(!reduceMotion)}
+              className="px-2.5 py-1 rounded-md border border-[#18181B]/25 text-[11px] font-mono text-[#52525B] hover:text-[#18181B] hover:border-[#18181B] transition-colors"
+            >
+              {reduceMotion ? 'Reduce Motion: ON' : 'Reduce Motion'}
+            </button>
           </div>
         </div>
       </footer>
 
-    </div>
+      </div>
+    </MotionConfig>
   );
 }

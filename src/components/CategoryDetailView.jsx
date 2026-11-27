@@ -1,424 +1,291 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  ArrowLeft, 
-  Clock, 
-  MapPin, 
-  Star, 
-  ShieldCheck, 
-  ExternalLink, 
-  Tag, 
-  Ban, 
-  Plus, 
-  RotateCcw,
-  Sparkles,
-  Eye
-} from 'lucide-react';
+import { motion } from 'framer-motion';
 import { getCategoryFallbackImage } from '../data/initialData';
+
+const cleanText = (str = '') =>
+  str.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
+
+const shortBlock = (str = '') =>
+  cleanText(str).replace(/^Hostel\s+/i, '').trim() || 'LPU';
+
+const shortTime = (str = '') =>
+  str.replace(/^Delivers in\s+/i, '').trim() || '2 days';
 
 export default function CategoryDetailView({
   category,
   talentList = [],
+  currentUser = null,
   onBackToCategories,
   onHireTalent,
   onOpenOfferModal,
-  onViewSamples
+  onViewSamples,
+  onApplyJuniorAssistant
 }) {
-  const [filterAvailableOnly, setFilterAvailableOnly] = useState(false);
-  const [searchFilter, setSearchFilter] = useState("");
+  const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'junior' | 'mobile' | 'gear'
+  const [sortBy, setSortBy] = useState('recommended'); // 'recommended' | 'lowest_price' | 'same_hostel'
 
-  // Filter students who offer this service category
+  const userHostel = currentUser?.hostelBlock || 'BH-4';
+
   const studentsInCategory = useMemo(() => {
-    return talentList.filter((t) => {
+    const filtered = talentList.filter((t) => {
       const matchesCat = t.category === category.categoryKey || t.category === category.name;
       if (!matchesCat) return false;
 
-      if (filterAvailableOnly) {
-        if (t.isPaused || (t.slots || 0) <= 0) return false;
-      }
-
-      if (searchFilter.trim() !== "") {
-        const q = searchFilter.toLowerCase();
-        const matchesTitle = t.title.toLowerCase().includes(q);
-        const matchesDesc = t.description.toLowerCase().includes(q);
-        const matchesStudent = t.studentId.toLowerCase().includes(q);
-        const matchesTools = t.tools && t.tools.some(tool => tool.toLowerCase().includes(q));
-        if (!matchesTitle && !matchesDesc && !matchesStudent && !matchesTools) return false;
+      const gearLower = (t.gearTag || '').toLowerCase();
+      if (activeFilter === 'junior' && !t.juniorAssistantOpen) return false;
+      if (activeFilter === 'mobile' && !gearLower.includes('mobile')) return false;
+      if (activeFilter === 'gear' && !(gearLower.includes('dslr') || gearLower.includes('gimbal') || gearLower.includes('camera'))) {
+        return false;
       }
 
       return true;
     });
-  }, [talentList, category, filterAvailableOnly, searchFilter]);
+
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'lowest_price') {
+        return (a.startingPrice || 0) - (b.startingPrice || 0);
+      }
+      if (sortBy === 'same_hostel') {
+        const aMatch = (a.hostelTag || a.campusLocation || '').toLowerCase().includes(userHostel.toLowerCase()) ? 1 : 0;
+        const bMatch = (b.hostelTag || b.campusLocation || '').toLowerCase().includes(userHostel.toLowerCase()) ? 1 : 0;
+        if (bMatch !== aMatch) return bMatch - aMatch;
+      }
+      return (b.recommendations || 0) - (a.recommendations || 0);
+    });
+  }, [talentList, category, activeFilter, sortBy, userHostel]);
 
   const availableCount = talentList.filter(
     (t) => (t.category === category.categoryKey || t.category === category.name) && !t.isPaused && (t.slots || 0) > 0
   ).length;
 
+  const filterOptions = [
+    { id: 'all', label: 'All' },
+    { id: 'junior', label: 'Junior Shadow Open' },
+    { id: 'mobile', label: 'Mobile Creator' },
+    { id: 'gear', label: 'Gear (DSLR/Gimbal)' }
+  ];
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-150">
+    <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-150">
       
-      {/* Top Nav: Back to All Categories Button */}
+      {/* Back Link */}
       <div>
         <button
           onClick={onBackToCategories}
-          className="inline-flex items-center text-xs font-mono font-bold text-[#18181B] bg-white hover:bg-[#FEF3C7] px-3.5 py-2 rounded-xl border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 transition-all"
+          className="text-xs font-mono font-bold text-[#52525B] hover:text-[#D95D39] transition-colors"
         >
-          <ArrowLeft className="w-3.5 h-3.5 mr-1.5 stroke-[2.5]" />
-          <span>← Back to All Service Categories</span>
+          ← Back to All Services
         </button>
       </div>
 
-      {/* Category Hero Banner Card */}
-      <div className="bg-white rounded-2xl border-[1.5px] border-[#18181B] shadow-[4px_4px_0px_#18181B] p-6 sm:p-8 relative overflow-hidden">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 rounded-md bg-[#FEF3C7] text-[#92400E] border-[1.2px] border-[#18181B] shadow-[1px_1px_0px_#18181B]">
-                Campus Category Directory
-              </span>
-
-              {category.isFlagship && (
-                <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 rounded-md bg-[#18181B] text-[#FEF3C7] border-[1.2px] border-[#18181B] shadow-[1px_1px_0px_rgba(255,255,255,0.4)]">
-                  ⚡ High-Value Tech
-                </span>
-              )}
-
-              {availableCount > 0 ? (
-                <span className="inline-flex items-center text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-[#DCFCE7] text-[#15803D] border-[1.2px] border-[#18181B] shadow-[1px_1px_0px_#18181B]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#15803D] mr-1.5 animate-pulse" />
-                  {availableCount} {availableCount === 1 ? 'Student' : 'Students'} Available Now
-                </span>
-              ) : (
-                <span className="inline-flex items-center text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-[#F3F4F6] text-[#6B7280] border-[1.2px] border-[#18181B]">
-                  ✕ Currently Booked Out (0 Open Slots)
-                </span>
-              )}
-            </div>
-
-            <h1 className="text-2xl sm:text-4xl font-display font-extrabold text-[#18181B] tracking-tight">
-              {category.name}
-            </h1>
-
-            <p className="text-xs sm:text-sm text-[#52525B] font-medium leading-relaxed">
-              {category.description}
-            </p>
-
-            {/* Standard Fair-Rate Box */}
-            <div className="pt-2 flex flex-wrap items-center gap-3 text-xs font-mono">
-              <div className="bg-[#F5F2EB] px-3 py-1.5 rounded-xl border-[1.2px] border-[#18181B] shadow-[1.5px_1.5px_0px_#18181B]">
-                <span className="text-[#71717A] text-[10px] uppercase font-bold block">Standard Campus Fair-Rate</span>
-                <span className="text-sm font-extrabold text-[#18181B]">{category.fairRateGuide}</span>
-              </div>
-              <div className="bg-[#DCFCE7] px-3 py-1.5 rounded-xl border-[1.2px] border-[#18181B] shadow-[1.5px_1.5px_0px_#18181B] text-[#15803D] flex items-center space-x-1.5">
-                <ShieldCheck className="w-4 h-4 flex-shrink-0" />
-                <span className="font-bold text-[11px]">2 Free Changes Guaranteed</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Action to Offer This Skill */}
-          <div className="flex-shrink-0 flex flex-col items-stretch sm:items-end justify-center gap-2">
-            <button
-              onClick={onOpenOfferModal}
-              className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-[#E05A47] hover:bg-[#D04936] text-white text-xs font-display font-bold border-[1.5px] border-[#18181B] shadow-[2.5px_2.5px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 transition-all"
-            >
-              <Plus className="w-3.5 h-3.5 mr-1.5 stroke-[3]" />
-              <span>Offer Your {category.categoryKey} Skills</span>
-            </button>
-            <span className="text-[10px] font-mono text-[#71717A] text-center sm:text-right">
-              Earn from fellow students & campus clubs
+      {/* Slim Single-Row Category Header Banner */}
+      <header className="bg-white rounded-2xl border-[1.5px] border-[#18181B] px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center space-x-2 text-xs font-mono mb-1">
+            <span className={`w-2 h-2 rounded-full ${availableCount > 0 ? 'bg-[#15803D]' : 'bg-[#9CA3AF]'}`} />
+            <span className={availableCount > 0 ? 'text-[#15803D] font-bold' : 'text-[#71717A]'}>
+              {availableCount} available
             </span>
+            <span className="text-[#71717A]">·</span>
+            <span className="text-[#52525B] truncate">{category.fairRateGuide}</span>
           </div>
-        </div>
-      </div>
-
-      {/* Filter / Search Bar within Category */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border-[1.5px] border-[#18181B] shadow-[2.5px_2.5px_0px_#18181B]">
-        <div className="flex items-center space-x-2 text-xs font-mono">
-          <span className="font-bold text-[#18181B]">Showing:</span>
-          <span className="bg-[#F5F2EB] px-2 py-0.5 rounded border border-[#18181B] font-bold">
-            {studentsInCategory.length} Individual {studentsInCategory.length === 1 ? 'Creator' : 'Creators'}
-          </span>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#18181B] tracking-tight">
+            {category.name}
+          </h1>
         </div>
 
-        <div className="flex items-center space-x-2.5">
-          <button
-            onClick={() => setFilterAvailableOnly(!filterAvailableOnly)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold border-[1.2px] border-[#18181B] transition-all ${
-              filterAvailableOnly
-                ? 'bg-[#18181B] text-white shadow-[1.5px_1.5px_0px_#18181B]'
-                : 'bg-white text-[#18181B] hover:bg-[#F5F2EB]'
-            }`}
-          >
-            {filterAvailableOnly ? '✓ Open Slots Only' : 'Filter Open Slots Only'}
-          </button>
+        <button
+          onClick={onOpenOfferModal}
+          className="px-4 py-2 rounded-lg bg-[#D95D39] hover:bg-[#C24E2C] text-white text-xs font-bold border-[1.5px] border-[#18181B] transition-colors self-start sm:self-auto flex-shrink-0"
+        >
+          + Offer this skill
+        </button>
+      </header>
 
-          <input
-            type="text"
-            value={searchFilter}
-            onChange={(e) => setSearchFilter(e.target.value)}
-            placeholder="Search within this skill..."
-            className="px-3 py-1.5 text-xs rounded-xl bg-[#F5F2EB] border-[1.2px] border-[#18181B] font-mono text-[#18181B] focus:outline-none focus:bg-white w-48 sm:w-56"
-          />
-        </div>
-      </div>
-
-      {/* Individual Student Profile Cards with Inline Work Samples */}
-      {studentsInCategory.length > 0 ? (
-        <div className="space-y-6">
-          {studentsInCategory.map((talent) => {
-            const isAvailable = !talent.isPaused && talent.slots > 0;
-            const studentShortName = talent.studentId.split('•')[0].trim();
-            const samples = talent.samples || [];
-
+      {/* Responsive Filter & Sort Bar with Shared layoutId Pill */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+          {filterOptions.map((f) => {
+            const isSelected = activeFilter === f.id;
             return (
-              <article
-                key={talent.id}
-                className={`rounded-2xl border-[1.5px] border-[#18181B] p-6 sm:p-7 transition-all ${
-                  isAvailable
-                    ? 'bg-white shadow-[4px_4px_0px_#18181B] hover:shadow-[6px_6px_0px_#18181B]'
-                    : 'bg-[#FAF8F5] opacity-90 shadow-[2px_2px_0px_#18181B]'
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setActiveFilter(f.id)}
+                className={`relative px-3 py-1 rounded-lg text-xs border-[1.5px] whitespace-nowrap transition-colors ${
+                  isSelected
+                    ? 'text-white border-[#18181B] font-bold'
+                    : 'bg-white text-[#18181B] border-[#18181B]/30 hover:border-[#18181B]'
                 }`}
               >
-                {/* Card Top: Student Profile Info + Starting Rate + Hire Button */}
-                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5 pb-6 border-b-[1.5px] border-[#18181B]">
-                  
-                  {/* Left: Identity, Badges, Title, Bio */}
-                  <div className="space-y-2 max-w-2xl">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {/* Availability Pill */}
-                      {talent.isPaused ? (
-                        <span className="inline-flex items-center text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#FEE2E2] text-[#991B1B] border-[1.2px] border-[#18181B]">
-                          <Ban className="w-2.5 h-2.5 mr-1" />
-                          Paused (Busy)
-                        </span>
-                      ) : talent.slots > 0 ? (
-                        <span className="inline-flex items-center text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#DCFCE7] text-[#15803D] border-[1.2px] border-[#18181B] shadow-[1px_1px_0px_#18181B]">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#15803D] mr-1 animate-pulse" />
-                          {talent.slots} {talent.slots === 1 ? 'Slot' : 'Slots'} Left
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#F3F4F6] text-[#6B7280] border-[1.2px] border-[#18181B]">
-                          ✕ Currently Booked
-                        </span>
-                      )}
+                {isSelected && (
+                  <motion.span
+                    layoutId="category-filter-pill"
+                    className="absolute inset-0 bg-[#18181B] rounded-[6px] z-0"
+                    transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                  />
+                )}
+                <span className="relative z-10">{f.label}</span>
+              </button>
+            );
+          })}
+        </div>
 
-                      {/* Student ID / Reg */}
-                      <span className="inline-block text-xs font-mono font-extrabold text-[#18181B] bg-[#F5F2EB] px-2.5 py-0.5 rounded-md border-[1.2px] border-[#18181B]">
-                        {talent.studentId}
-                      </span>
+        <div className="flex items-center space-x-2 text-xs font-mono flex-shrink-0">
+          <span className="text-[#52525B]">Sort:</span>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-2.5 py-1 rounded-lg bg-white border-[1.5px] border-[#18181B] text-[#18181B] focus:outline-none"
+          >
+            <option value="recommended">Recommended</option>
+            <option value="lowest_price">Lowest Price</option>
+            <option value="same_hostel">Same Block ({userHostel})</option>
+          </select>
+        </div>
+      </div>
 
-                      {/* Peer Recommendation */}
-                      <span className="inline-flex items-center text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-white text-[#15803D] border-[1.2px] border-[#18181B] shadow-[1px_1px_0px_#18181B]">
-                        <Star className="w-3 h-3 mr-1 fill-[#15803D] stroke-none" />
-                        ★ {talent.recommendations} Recommendations
-                      </span>
+      {/* 2-Column Creator Grid on Large Screens */}
+      {studentsInCategory.length > 0 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {studentsInCategory.map((talent) => {
+            const isAvailable = !talent.isPaused && talent.slots > 0;
+            const samples = talent.samples || [];
+            const hostelShort = shortBlock(talent.hostelTag || talent.campusLocation);
+            const gearShort = cleanText(talent.gearTag || (talent.tools ? talent.tools[0] : 'Laptop'));
+            const timeShort = shortTime(talent.deliveryTime);
+
+            return (
+              <motion.article
+                key={talent.id}
+                whileHover={{ y: -2, boxShadow: '3px 3px 0px #18181B' }}
+                whileTap={{ y: 1, boxShadow: '1px 1px 0px #18181B' }}
+                transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                className="bg-white rounded-2xl border-[1.5px] border-[#18181B] p-5 flex flex-col justify-between space-y-4"
+              >
+                
+                <div className="space-y-2.5">
+                  {/* Top Row: Student ID + Status Dot on Left, Bold Price on Right */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center space-x-2 text-[11px] font-mono">
+                        {!talent.isPaused && talent.slots > 0 ? (
+                          <span className="relative flex h-1.5 w-1.5 flex-shrink-0">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#15803D] opacity-60" />
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#15803D]" />
+                          </span>
+                        ) : (
+                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                            talent.isPaused ? 'bg-[#F59E0B]' : 'bg-[#9CA3AF]'
+                          }`} />
+                        )}
+                        <span className={talent.isPaused ? 'text-[#B45309] font-bold' : talent.slots > 0 ? 'text-[#15803D] font-bold' : 'text-[#71717A]'}>
+                          {talent.isPaused ? 'Busy (Exams)' : talent.slots > 0 ? `Available (${talent.slots})` : 'Booked'}
+                        </span>
+                        <span className="text-[#71717A]">·</span>
+                        <span className="text-[#52525B] truncate">{talent.studentId.split('•')[0].trim()}</span>
+                      </div>
+
+                      <h2 className="text-base font-bold text-[#18181B] leading-snug mt-1 line-clamp-1">
+                        {talent.title}
+                      </h2>
                     </div>
 
-                    {/* Skill Title */}
-                    <h3 className="text-xl sm:text-2xl font-display font-extrabold text-[#18181B] leading-tight">
-                      {talent.title}
-                    </h3>
-
-                    {/* Description */}
-                    <p className="text-xs sm:text-sm text-[#52525B] leading-relaxed font-normal">
-                      {talent.description}
-                    </p>
-
-                    {/* Campus Location & Delivery */}
-                    <div className="flex flex-wrap items-center gap-3 pt-1 text-xs font-mono text-[#71717A]">
-                      <span className="flex items-center text-[#18181B] font-semibold">
-                        <MapPin className="w-3.5 h-3.5 mr-1 text-[#E05A47]" />
-                        {talent.campusLocation || 'LPU Campus'}
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center">
-                        <Clock className="w-3.5 h-3.5 mr-1 text-[#E05A47]" />
-                        {talent.deliveryTime}
-                      </span>
-                      {talent.tools && (
-                        <>
-                          <span>•</span>
-                          <span className="text-[#18181B]">Tools: {talent.tools.join(', ')}</span>
-                        </>
-                      )}
-                    </div>
+                    <span className="font-mono font-bold text-xs px-2.5 py-1 rounded-lg bg-[#F6F4EF] text-[#18181B] border-[1.5px] border-[#18181B] flex-shrink-0">
+                      From ₹{Number(talent.startingPrice).toLocaleString('en-IN')}
+                    </span>
                   </div>
 
-                  {/* Right: Rate Box & Direct Hire Button */}
-                  <div className="flex sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between sm:justify-start gap-3 bg-[#F5F2EB] p-4 rounded-xl border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B] flex-shrink-0 min-w-[200px]">
-                    <div>
-                      <span className="text-[10px] font-mono text-[#71717A] uppercase font-bold block">Individual Rate</span>
-                      <span className="font-mono font-extrabold text-2xl text-[#18181B]">
-                        ₹{Number(talent.startingPrice).toLocaleString('en-IN')}
-                      </span>
-                      <span className="text-[10px] font-mono text-[#71717A] block">
-                        {talent.priceUnit ? `/${talent.priceUnit.replace('per ', '')}` : 'per task'}
-                      </span>
-                    </div>
+                  {/* Single Clean Concise Metadata Line */}
+                  <p className="text-xs font-mono text-[#52525B] truncate">
+                    {hostelShort} · {gearShort} · {timeShort} · ★ {talent.recommendations}
+                  </p>
 
-                    <div className="w-full flex flex-col gap-2">
-                      {samples.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => onViewSamples && onViewSamples(talent)}
-                          className="w-full inline-flex items-center justify-center px-3 py-2 rounded-xl bg-white hover:bg-[#FEF3C7] text-[#18181B] text-xs font-mono font-bold border-[1.5px] border-[#18181B] shadow-[1.5px_1.5px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 transition-all"
-                        >
-                          <Eye className="w-3.5 h-3.5 mr-1.5 text-[#18181B]" />
-                          <span>View Showcase Modal ({samples.length})</span>
-                        </button>
-                      )}
+                  {/* 1-Sentence Crisp Bio */}
+                  <p className="text-xs text-[#52525B] line-clamp-1">
+                    {talent.description}
+                  </p>
 
-                      {isAvailable ? (
-                        <button
-                          onClick={() => onHireTalent(talent)}
-                          className="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-[#E05A47] hover:bg-[#D04936] text-white text-xs font-display font-bold border-[1.5px] border-[#18181B] shadow-[2.5px_2.5px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
-                        >
-                          <span>Hire {studentShortName} →</span>
-                        </button>
-                      ) : (
-                        <button
-                          disabled
-                          className="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-[#E5E2DC] text-[#71717A] text-xs font-mono font-bold border-[1.5px] border-[#18181B]/40 cursor-not-allowed select-none"
-                        >
-                          <span>Currently Booked</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* Card Bottom: INLINE SAMPLE WORK GALLERY (Visible Directly on the Page) */}
-                <div className="mt-5">
-                  <div className="flex items-center justify-between mb-3.5">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#18181B] flex items-center">
-                        <Sparkles className="w-3.5 h-3.5 mr-1.5 text-[#D97706]" />
-                        <span>Past Work Showcase by {studentShortName}</span>
-                      </span>
-                      <span className="text-[10px] font-mono font-bold px-2 py-0.2 rounded bg-[#FEF3C7] text-[#92400E] border border-[#18181B]">
-                        {samples.length} Verified {samples.length === 1 ? 'Sample' : 'Samples'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Inline Samples Grid */}
-                  {samples.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {samples.map((sample, idx) => {
+                  {/* Compact 2-Column Sample Work Mini-Grid (Title & Price only) */}
+                  {samples.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2.5 pt-1">
+                      {samples.slice(0, 2).map((sample, idx) => {
                         const charged = sample.chargedPrice || talent.startingPrice;
-
                         return (
                           <div
                             key={idx}
-                            className="bg-[#F5F2EB] rounded-xl border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B] p-3.5 flex flex-col justify-between hover:bg-white transition-all"
+                            onClick={() => onViewSamples && onViewSamples(talent)}
+                            className="group rounded-xl border-[1.5px] border-[#18181B] bg-white overflow-hidden cursor-pointer"
                           >
-                            <div>
-                              {/* Visual Preview Thumbnail (Clickable to open showcase modal) */}
-                              <div 
-                                onClick={() => onViewSamples && onViewSamples(talent)}
-                                className="relative h-36 w-full rounded-lg border border-[#18181B] overflow-hidden mb-3 bg-[#E5E2DC] cursor-pointer group/thumb"
-                                title="Click to view past work showcase in full modal"
-                              >
-                                <img
-                                  src={sample.image || getCategoryFallbackImage(talent.category)}
-                                  alt={sample.title}
-                                  onError={(e) => {
-                                    e.target.onerror = null;
-                                    e.target.src = getCategoryFallbackImage(talent.category);
-                                  }}
-                                  className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-300"
-                                />
-
-                                {/* Hover preview overlay */}
-                                <div className="absolute inset-0 bg-[#18181B]/20 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center transition-opacity">
-                                  <span className="inline-flex items-center text-[11px] font-mono font-bold text-white bg-[#18181B]/85 px-2.5 py-1 rounded-md border border-white/50 shadow-md">
-                                    <Eye className="w-3 h-3 mr-1" />
-                                    Click to Enlarge
-                                  </span>
-                                </div>
-
-                                {/* Floating Badges: Sample # and Bold Price Pill */}
-                                <div className="absolute top-2 left-2 right-2 flex items-center justify-between pointer-events-none">
-                                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-white/95 text-[#18181B] border border-[#18181B] shadow-[1px_1px_0px_#18181B]">
-                                    Sample #{idx + 1}
-                                  </span>
-
-                                  <span className="inline-flex items-center text-[10px] font-mono font-extrabold px-2 py-0.5 rounded bg-[#18181B] text-[#FEF3C7] border border-[#18181B] shadow-[1px_1px_0px_rgba(255,255,255,0.7)]">
-                                    <Tag className="w-2.5 h-2.5 mr-1 text-[#F59E0B]" />
-                                    Charged: ₹{Number(charged).toLocaleString('en-IN')}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Title & Context */}
-                              <h4 className="font-display font-bold text-sm text-[#18181B] leading-snug">
-                                {sample.title}
-                              </h4>
-
-                              {sample.context && (
-                                <span className="inline-block text-[10px] font-mono font-semibold text-[#15803D] bg-[#DCFCE7] px-2 py-0.5 rounded border border-[#18181B]/30 mt-1">
-                                  {sample.context}
-                                </span>
-                              )}
-
-                              {sample.note && (
-                                <p className="text-xs text-[#52525B] line-clamp-2 mt-1.5 leading-relaxed font-normal">
-                                  {sample.note}
-                                </p>
-                              )}
+                            <div className="h-24 sm:h-28 w-full overflow-hidden bg-[#E5E2DC] border-b-[1.5px] border-[#18181B]">
+                              <img
+                                src={sample.image || getCategoryFallbackImage(talent.category)}
+                                alt={sample.title}
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = getCategoryFallbackImage(talent.category);
+                                }}
+                                className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+                              />
                             </div>
-
-                            {/* Action Buttons: Modal View & Open Full Link */}
-                            <div className="mt-3 pt-2.5 border-t border-dashed border-[#18181B]/20 flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => onViewSamples && onViewSamples(talent)}
-                                className="flex-1 inline-flex items-center justify-center py-1.5 px-3 rounded-lg bg-white hover:bg-[#FEF3C7] text-[#18181B] text-xs font-mono font-bold border border-[#18181B] shadow-[1px_1px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 transition-all"
-                              >
-                                <Eye className="w-3 h-3 mr-1.5 text-[#18181B]" />
-                                <span>Preview</span>
-                              </button>
-                              
-                              <a
-                                href={sample.link || "#"}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center py-1.5 px-3 rounded-lg bg-white hover:bg-[#FEF3C7] text-[#18181B] text-xs font-mono font-bold border border-[#18181B] shadow-[1px_1px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 transition-all"
-                                title="Open project link in new tab"
-                              >
-                                <span className="mr-1">Link</span>
-                                <ExternalLink className="w-3 h-3 text-[#E05A47]" />
-                              </a>
+                            <div className="p-2 flex items-center justify-between gap-1.5">
+                              <span className="text-[11px] font-bold text-[#18181B] truncate">
+                                {sample.title}
+                              </span>
+                              <span className="text-[11px] font-mono font-bold text-[#D95D39] flex-shrink-0">
+                                ₹{Number(charged).toLocaleString('en-IN')}
+                              </span>
                             </div>
                           </div>
                         );
                       })}
                     </div>
-                  ) : (
-                    <p className="text-xs font-mono text-[#71717A] italic">
-                      This student hasn't uploaded specific past sample links yet.
-                    </p>
                   )}
                 </div>
 
-              </article>
+                {/* Card Footer Actions */}
+                <div className="pt-3 border-t border-[#18181B]/15 flex flex-wrap items-center justify-between gap-2">
+                  {talent.juniorAssistantOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => onApplyJuniorAssistant && onApplyJuniorAssistant(talent)}
+                      className="px-2.5 py-1.5 rounded-lg bg-[#DCFCE7] hover:bg-[#BBF7D0] text-[#15803D] text-[11px] font-bold border-[1.5px] border-[#18181B] transition-colors"
+                    >
+                      Apply as Junior Shadow
+                    </button>
+                  ) : (
+                    <span />
+                  )}
+
+                  {isAvailable ? (
+                    <button
+                      onClick={() => onHireTalent(talent)}
+                      className="px-4 py-1.5 rounded-lg bg-[#D95D39] hover:bg-[#C24E2C] text-white text-xs font-bold border-[1.5px] border-[#18181B] transition-colors"
+                    >
+                      Hire Directly →
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="px-4 py-1.5 rounded-lg bg-[#F3F4F6] text-[#9CA3AF] text-xs font-mono font-bold border-[1.5px] border-[#18181B]/30 cursor-not-allowed"
+                    >
+                      {talent.isPaused ? 'Busy (Exams)' : 'Booked'}
+                    </button>
+                  )}
+                </div>
+
+              </motion.article>
             );
           })}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border-[1.5px] border-[#18181B] shadow-[4px_4px_0px_#18181B] p-12 text-center">
-          <p className="text-lg font-display font-bold text-[#18181B]">No matching students found</p>
-          <p className="text-xs text-[#52525B] mt-1 font-normal">Try clearing your search query or reset filters.</p>
+        <div className="bg-white rounded-2xl border-[1.5px] border-[#18181B] p-10 text-center">
+          <p className="text-base font-bold text-[#18181B]">No matching creators found</p>
           <button
-            onClick={() => {
-              setFilterAvailableOnly(false);
-              setSearchFilter("");
-            }}
-            className="mt-4 inline-flex items-center text-xs font-mono font-bold text-[#E05A47] hover:underline"
+            onClick={() => setActiveFilter('all')}
+            className="mt-3 text-xs font-bold text-[#D95D39] underline underline-offset-4"
           >
-            <RotateCcw className="w-3.5 h-3.5 mr-1" />
-            Reset Filters
+            Show all creators
           </button>
         </div>
       )}
@@ -426,4 +293,3 @@ export default function CategoryDetailView({
     </div>
   );
 }
-

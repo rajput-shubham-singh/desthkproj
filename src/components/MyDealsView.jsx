@@ -1,199 +1,343 @@
 import React, { useState } from 'react';
-import { Check, Copy, Star, Clock, CheckCircle2, ArrowRight, RotateCcw } from 'lucide-react';
+import { Check, Copy, Award, X, Printer } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-export default function MyDealsView({ deals, onToggleStatus, onReopenSlot, onRecommendStudent, onGoToTalent }) {
+const DEAL_STAGES = [
+  { step: 1, label: 'Brief Locked' },
+  { step: 2, label: 'Watermarked Draft' },
+  { step: 3, label: 'Revision 1/2' },
+  { step: 4, label: 'Final Handover' }
+];
+
+export default function MyDealsView({ 
+  deals, 
+  currentUser,
+  onAdvanceStep,
+  onToggleStatus, 
+  onReopenSlot, 
+  onRecommendStudent, 
+  onGoToTalent 
+}) {
   const [copiedId, setCopiedId] = useState(null);
+  const [badgeModalDeal, setBadgeModalDeal] = useState(null);
+  const [badgeCopied, setBadgeCopied] = useState(false);
 
   const handleCopy = (deal) => {
-    const text = `🤝 *LPU SKILLS FOR HIRE — DEAL DETAILS*\n───────────────────────────────\n📋 *Task:* ${deal.title}\n👤 *With:* ${deal.withPerson}\n💰 *Price:* ₹${deal.price}\n⏱️ *Deadline:* ${deal.deadline}\n💳 *Payment Term:* ${deal.paymentTerm}\n🛡️ *Changes:* ${deal.freeChanges}\n🔖 *Ref Code:* ${deal.dealCode}\n───────────────────────────────\n_LPU Student-to-Student Marketplace_`;
+    const paymentLine = deal.paymentType === 'barter' 
+      ? `Skill Barter: ${deal.barterOffer || deal.paymentTerm}`
+      : `Price: ₹${deal.price} (${deal.paymentTerm})`;
+    const text = `LPU Skills for Hire — Deal Details\nTask: ${deal.title}\nWith: ${deal.withPerson}\n${paymentLine}\nDeadline: ${deal.deadline}\nRevisions: ${deal.freeChanges}\nRef: ${deal.dealCode}`;
     navigator.clipboard.writeText(text);
     setCopiedId(deal.id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleCopyBadge = (deal) => {
+    const studentId = currentUser ? `${currentUser.fullName} (Reg: ${currentUser.regNo})` : (deal.initiatedBy || 'Verified LPU Student');
+    const text = `Verified Campus Proof-of-Work — Skills for Hire (LPU)\nStudent: ${studentId}\nSkill Delivered: ${deal.title} (${deal.category})\nClient / Club Sign-off: ${deal.withPerson}\nStatus: On-Time Completion • Ref ${deal.dealCode}`;
+    navigator.clipboard.writeText(text);
+    setBadgeCopied(true);
+    setTimeout(() => setBadgeCopied(false), 2200);
+  };
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-150">
+    <div className="space-y-8 animate-in fade-in duration-150">
       
       {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-extrabold text-[#18181B] tracking-tight">
+      <div className="bg-white rounded-2xl border-[1.5px] border-[#18181B] p-6 sm:p-7">
+        <h1 className="text-2xl sm:text-3xl font-bold text-[#18181B] tracking-tight">
           My Deals
         </h1>
-        <p className="text-xs sm:text-sm text-[#52525B] mt-1 font-medium">
-          Track your campus tasks, agreed deadlines, and recommend peers after work is completed.
+        <p className="text-sm text-[#52525B] mt-1">
+          Track active campus deals through all 4 stages and unlock Verified Certificates at Final Handover.
         </p>
       </div>
 
       {deals.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-6">
           {deals.map((deal) => {
-            const isCompleted = deal.status === 'completed';
+            const currentStep = deal.trackerStep || (deal.status === 'completed' ? 4 : 1);
+            const isCompleted = currentStep === 4 || deal.status === 'completed';
             const isCopied = copiedId === deal.id;
+            const isBarter = deal.paymentType === 'barter';
 
             return (
               <article
                 key={deal.id}
-                className={`bg-white rounded-2xl border-[1.5px] border-[#18181B] p-5 sm:p-6 transition-all flex flex-col justify-between shadow-[3px_3px_0px_#18181B] hover:shadow-[5px_5px_0px_#18181B] ${
-                  isCompleted ? 'bg-[#F0FDF4]/50' : 'bg-white'
-                }`}
+                className="bg-white rounded-2xl border-[1.5px] border-[#18181B] hover:shadow-[3px_3px_0px_#18181B] transition-shadow p-6 sm:p-7 space-y-5"
               >
-                <div>
-                  {/* Top Bar: Code + Status Badge */}
-                  <div className="flex items-center justify-between gap-2 mb-3.5">
-                    <span className="font-mono text-xs font-bold text-[#18181B] bg-[#FEF3C7] px-2.5 py-0.5 rounded-md border-[1.2px] border-[#18181B] shadow-[1.5px_1.5px_0px_#18181B]">
+                {/* Top Metadata + Bold Rate Tag */}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center space-x-2.5 text-xs font-mono">
+                    <span className="px-2.5 py-0.5 rounded bg-[#F6F4EF] border border-[#18181B] font-bold text-[#18181B]">
                       {deal.dealCode}
                     </span>
-                    
-                    {/* Status Pill Toggle */}
+                    <span className="text-[#52525B]">{deal.category}</span>
+                  </div>
+
+                  <span className="inline-flex items-center space-x-1.5 text-xs font-mono font-bold">
+                    <span className={`w-2 h-2 rounded-full ${isCompleted ? 'bg-[#15803D]' : 'bg-[#F59E0B]'}`} />
+                    <span className={isCompleted ? 'text-[#15803D]' : 'text-[#18181B]'}>
+                      {isCompleted ? '4. Final Handover' : `Stage ${currentStep} of 4`}
+                    </span>
+                  </span>
+                </div>
+
+                {/* Title & Collaborator */}
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-bold text-[#18181B]">
+                      {deal.title}
+                    </h3>
+                    <p className="text-xs font-mono text-[#52525B] mt-1">
+                      With <strong className="text-[#18181B]">{deal.withPerson}</strong>
+                    </p>
+                  </div>
+
+                  <span className="font-mono font-bold text-xs px-2.5 py-1 rounded-lg bg-[#F6F4EF] text-[#18181B] border-[1.5px] border-[#18181B] self-start">
+                    {isBarter ? 'Skill Barter' : `₹${Number(deal.price).toLocaleString('en-IN')}`}
+                  </span>
+                </div>
+
+                {/* 4-Stage Visual Progress Stepper */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                  {DEAL_STAGES.map((s) => {
+                    const done = currentStep > s.step || (currentStep === 4 && s.step === 4);
+                    const active = currentStep === s.step && !isCompleted;
+
+                    return (
+                      <button
+                        key={s.step}
+                        type="button"
+                        onClick={() => onAdvanceStep ? onAdvanceStep(deal.id, s.step) : null}
+                        className={`text-left px-3 py-2.5 rounded-lg border-[1.5px] text-xs font-mono transition-colors ${
+                          done
+                            ? 'bg-[#DCFCE7] border-[#18181B] text-[#15803D] font-bold'
+                            : active
+                              ? 'bg-[#FEF3C7] border-[#18181B] text-[#18181B] font-bold shadow-[2px_2px_0px_#18181B]'
+                              : 'bg-[#F6F4EF] border-[#18181B]/30 text-[#52525B] hover:border-[#18181B]'
+                        }`}
+                      >
+                        {s.step}. {s.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* 3-Point Upfront Terms Summary */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-[#18181B]/15 text-xs font-mono">
+                  <div>
+                    <span className="text-[#71717A] block">{isBarter ? 'Skill Barter' : 'Budget'}</span>
+                    <span className="font-bold text-[#18181B] mt-0.5 block">
+                      {isBarter ? (deal.barterOffer || deal.paymentTerm) : `₹${Number(deal.price).toLocaleString('en-IN')}`}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[#71717A] block">Deadline</span>
+                    <span className="font-bold text-[#18181B] mt-0.5 block">{deal.deadline}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#71717A] block">Revisions Lock</span>
+                    <span className="font-bold text-[#15803D] mt-0.5 block">{deal.freeChanges || 'Max 2 Free Revisions'}</span>
+                  </div>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="pt-4 border-t border-[#18181B]/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-4 text-xs font-mono">
                     <button
-                      onClick={() => onToggleStatus(deal.id)}
-                      className={`inline-flex items-center text-xs font-mono font-bold px-2.5 py-1 rounded-md border-[1.2px] border-[#18181B] shadow-[1.5px_1.5px_0px_#18181B] transition-all active:translate-x-0.5 active:translate-y-0.5 ${
-                        isCompleted
-                          ? 'bg-[#DCFCE7] text-[#15803D]'
-                          : 'bg-[#F5F2EB] text-[#18181B] hover:bg-[#FEF3C7]'
-                      }`}
-                      title="Click to toggle status between In Progress and Completed"
+                      onClick={() => handleCopy(deal)}
+                      className="inline-flex items-center text-[#52525B] hover:text-[#18181B] font-bold transition-colors"
                     >
-                      {isCompleted ? (
+                      {isCopied ? (
                         <>
-                          <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-[#15803D]" />
-                          Completed (Reopen)
+                          <Check className="w-3.5 h-3.5 mr-1 text-[#15803D]" />
+                          <span>Copied</span>
                         </>
                       ) : (
                         <>
-                          <Clock className="w-3.5 h-3.5 mr-1 text-[#E05A47]" />
-                          In Progress
+                          <Copy className="w-3.5 h-3.5 mr-1" />
+                          <span>Copy for WhatsApp</span>
                         </>
                       )}
                     </button>
-                  </div>
 
-                  {/* Task Title */}
-                  <h3 className="font-display font-bold text-lg text-[#18181B] leading-snug">
-                    {deal.title}
-                  </h3>
-                  <p className="text-xs font-mono text-[#52525B] mt-1">
-                    With <strong className="text-[#18181B]">{deal.withPerson}</strong>
-                  </p>
-
-                  {/* Deal Specs Index Box */}
-                  <div className="mt-4 bg-[#F5F2EB] rounded-xl p-3.5 border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B] text-xs space-y-1.5 font-mono">
-                    <div className="flex justify-between">
-                      <span className="text-[#71717A]">Agreed Price:</span>
-                      <span className="font-bold text-sm text-[#18181B]">₹{deal.price}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#71717A]">Deadline:</span>
-                      <span className="text-[#18181B] font-semibold">{deal.deadline}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#71717A]">Payment:</span>
-                      <span className="text-[#18181B]">{deal.paymentTerm}</span>
-                    </div>
-                    <div className="flex justify-between pt-1.5 border-t-[1px] border-dashed border-[#18181B]/40">
-                      <span className="text-[#71717A]">Free Changes:</span>
-                      <span className="text-[#15803D] font-bold">{deal.freeChanges}</span>
-                    </div>
-                  </div>
-
-                  {deal.notes && (
-                    <p className="text-[11px] font-mono text-[#71717A] mt-2 italic">
-                      Note: "{deal.notes}"
-                    </p>
-                  )}
-
-                  {/* Restock Notification on Completed Deals */}
-                  {isCompleted && (
-                    <div className="mt-3.5 p-2.5 rounded-xl bg-[#DCFCE7] border-[1.2px] border-[#18181B] flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-[#15803D]">
-                      <span className="font-bold flex items-center">
-                        <CheckCircle2 className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
-                        Deal Completed • +1 Slot Restocked Live
-                      </span>
-                      {onReopenSlot && (
-                        <button
-                          onClick={() => onReopenSlot(deal)}
-                          className="inline-flex items-center text-[10px] font-bold text-[#18181B] bg-white px-2 py-1 rounded-md border border-[#18181B] hover:bg-[#FEF3C7] shadow-[1px_1px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 transition-all"
-                          title="1-click to restore an extra booking slot for this skill"
-                        >
-                          <RotateCcw className="w-3 h-3 mr-1 text-[#E05A47]" />
-                          Re-open Extra Slot
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Bottom Actions: WhatsApp Copy & Live "Recommend Student" */}
-                <div className="mt-5 pt-4 border-t-[1.5px] border-[#18181B] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-                  
-                  {/* WhatsApp Copy */}
-                  <button
-                    onClick={() => handleCopy(deal)}
-                    className="inline-flex items-center justify-center px-3 py-1.5 rounded-xl bg-white hover:bg-[#FEF3C7] text-xs font-mono font-bold text-[#18181B] border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all"
-                  >
-                    {isCopied ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 mr-1 text-[#15803D]" />
-                        <span>Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5 mr-1 text-[#18181B]" />
-                        <span>Copy for WhatsApp</span>
-                      </>
-                    )}
-                  </button>
-
-                  <div className="flex items-center space-x-2">
-                    {/* Toggle button */}
-                    <button
-                      onClick={() => onToggleStatus(deal.id)}
-                      className={`inline-flex items-center justify-center px-3 py-1.5 rounded-xl text-xs font-display font-bold border-[1.5px] border-[#18181B] shadow-[2px_2px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 transition-all ${
-                        isCompleted
-                          ? 'bg-[#F5F2EB] hover:bg-[#E5E2DC] text-[#52525B]'
-                          : 'bg-[#E05A47] hover:bg-[#D04936] text-white'
-                      }`}
-                    >
-                      {isCompleted ? 'Mark In Progress' : 'Mark Completed'}
-                    </button>
-
-                    {/* Recommend Student Button (Active when completed) */}
                     {isCompleted && (
                       <button
-                        onClick={() => onRecommendStudent(deal.id, deal.withPerson)}
-                        disabled={deal.hasRecommended}
-                        className={`inline-flex items-center justify-center px-3.5 py-1.5 rounded-xl text-xs font-display font-bold border-[1.5px] border-[#18181B] transition-all ${
-                          deal.hasRecommended
-                            ? 'bg-[#DCFCE7] text-[#15803D] shadow-[1.5px_1.5px_0px_#18181B] cursor-default'
-                            : 'bg-[#15803D] hover:bg-[#166534] text-white shadow-[2.5px_2.5px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5'
-                        }`}
+                        type="button"
+                        onClick={() => {
+                          setBadgeCopied(false);
+                          setBadgeModalDeal(deal);
+                        }}
+                        className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#DCFCE7] hover:bg-[#BBF7D0] text-[#15803D] font-bold border-[1.5px] border-[#18181B] transition-colors"
                       >
-                        <Star className={`w-3.5 h-3.5 mr-1 ${deal.hasRecommended ? 'fill-[#15803D]' : 'fill-white'}`} />
-                        {deal.hasRecommended ? 'Recommended! (+1)' : '★ Recommend'}
+                        <Award className="w-3.5 h-3.5 mr-1.5" />
+                        <span>View Verified Certificate</span>
+                      </button>
+                    )}
+
+                    {isCompleted && onReopenSlot && (
+                      <button
+                        onClick={() => onReopenSlot(deal)}
+                        className="text-[#52525B] hover:text-[#18181B] underline underline-offset-4"
+                      >
+                        Re-open slot
                       </button>
                     )}
                   </div>
 
+                  <div className="flex items-center space-x-3">
+                    {!isCompleted ? (
+                      <button
+                        onClick={() => onAdvanceStep ? onAdvanceStep(deal.id, currentStep + 1) : onToggleStatus(deal.id)}
+                        className="px-4 py-2 rounded-lg bg-[#D95D39] hover:bg-[#C24E2C] text-white text-xs font-bold border-[1.5px] border-[#18181B] hover:shadow-[2px_2px_0px_#18181B] transition-all"
+                      >
+                        Advance Stage →
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => onToggleStatus(deal.id)}
+                          className="px-3.5 py-2 rounded-lg border-[1.5px] border-[#18181B] bg-[#F6F4EF] text-xs font-bold text-[#52525B] hover:text-[#18181B]"
+                        >
+                          Reopen
+                        </button>
+                        <button
+                          onClick={() => onRecommendStudent(deal.id, deal.withPerson)}
+                          disabled={deal.hasRecommended}
+                          className={`px-4 py-2 rounded-lg text-xs font-bold border-[1.5px] border-[#18181B] transition-colors ${
+                            deal.hasRecommended
+                              ? 'bg-[#DCFCE7] text-[#15803D] cursor-default'
+                              : 'bg-[#15803D] hover:bg-[#166534] text-white'
+                          }`}
+                        >
+                          {deal.hasRecommended ? 'Recommended' : 'Recommend Student'}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </article>
             );
           })}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border-[1.5px] border-[#18181B] shadow-[4px_4px_0px_#18181B] p-12 text-center">
-          <p className="text-lg font-display font-bold text-[#18181B]">No active deals yet</p>
-          <p className="text-xs text-[#52525B] mt-1 max-w-sm mx-auto font-normal">
-            When you hire a student or accept a requirement, your confirmed deal will appear here.
+        <div className="bg-white rounded-2xl border-[1.5px] border-[#18181B] p-12 text-center">
+          <p className="text-base font-bold text-[#18181B]">No active deals yet</p>
+          <p className="text-sm text-[#52525B] mt-1">
+            When you hire a student or accept a requirement, your deal will appear here.
           </p>
           <button
             onClick={onGoToTalent}
-            className="mt-5 inline-flex items-center px-4 py-2 rounded-xl bg-[#E05A47] hover:bg-[#D04936] text-white text-xs font-display font-bold border-[1.5px] border-[#18181B] shadow-[2.5px_2.5px_0px_#18181B] active:translate-x-0.5 active:translate-y-0.5 transition-all"
+            className="mt-5 px-4 py-2 rounded-lg bg-[#D95D39] text-white text-xs font-bold border-[1.5px] border-[#18181B]"
           >
-            <span>Browse Student Talent</span>
-            <ArrowRight className="w-3.5 h-3.5 ml-1.5 stroke-[2.5]" />
+            Explore categories
           </button>
         </div>
       )}
+
+      {/* Printable / Shareable Campus Proof-of-Work Certificate Modal */}
+      <AnimatePresence>
+        {badgeModalDeal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.16 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#18181B]/45 backdrop-blur-xs"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="bg-white rounded-2xl border-[1.5px] border-[#18181B] shadow-[6px_6px_0px_#18181B] max-w-md w-full p-7 relative"
+            >
+            <button
+              onClick={() => setBadgeModalDeal(null)}
+              className="absolute top-5 right-5 text-[#52525B] hover:text-[#18181B] p-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="text-center space-y-4">
+              <div className="w-12 h-12 rounded-xl bg-[#DCFCE7] border-[1.5px] border-[#18181B] flex items-center justify-center mx-auto">
+                <Award className="w-6 h-6 text-[#15803D]" />
+              </div>
+
+              <div>
+                <span className="inline-block text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded bg-[#DCFCE7] text-[#15803D] border border-[#18181B]">
+                  Verified Campus Proof-of-Work
+                </span>
+                <h3 className="text-xl font-bold text-[#18181B] mt-2">
+                  Completion Certificate
+                </h3>
+                <p className="text-xs font-mono text-[#52525B] mt-0.5">
+                  Skills for Hire · Lovely Professional University
+                </p>
+              </div>
+
+              <div className="bg-[#F6F4EF] rounded-xl p-4 border-[1.5px] border-[#18181B] text-left text-xs font-mono space-y-2.5">
+                <div className="flex justify-between">
+                  <span className="text-[#71717A]">Student ID</span>
+                  <span className="text-[#18181B] font-bold">
+                    {currentUser ? `${currentUser.fullName} (${currentUser.regNo})` : (badgeModalDeal.initiatedBy || 'Verified LPU Student')}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#71717A]">Skill Delivered</span>
+                  <span className="text-[#18181B] font-bold text-right max-w-[200px]">
+                    {badgeModalDeal.title}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#71717A]">Client / Club Sign-off</span>
+                  <span className="text-[#18181B] font-bold">{badgeModalDeal.withPerson}</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t border-[#18181B]/20">
+                  <span className="text-[#71717A]">Sign-off Status</span>
+                  <span className="text-[#15803D] font-bold">✓ On-Time Completion</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#71717A]">Verification ID</span>
+                  <span className="text-[#D95D39] font-bold">{badgeModalDeal.dealCode}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleCopyBadge(badgeModalDeal)}
+                  className="flex-1 inline-flex items-center justify-center py-2.5 px-4 rounded-lg bg-[#D95D39] hover:bg-[#C24E2C] text-white text-xs font-bold border-[1.5px] border-[#18181B] transition-colors"
+                >
+                  {badgeCopied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 mr-1.5" />
+                      <span>Copied for Resume</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 mr-1.5" />
+                      <span>Copy Proof Text</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="inline-flex items-center justify-center py-2.5 px-3.5 rounded-lg bg-white hover:bg-[#F6F4EF] text-[#18181B] text-xs font-bold border-[1.5px] border-[#18181B] transition-colors"
+                  title="Print Certificate"
+                >
+                  <Printer className="w-3.5 h-3.5 mr-1" />
+                  <span>Print</span>
+                </button>
+              </div>
+            </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
